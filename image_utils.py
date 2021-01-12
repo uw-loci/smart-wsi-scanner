@@ -1,23 +1,36 @@
 from skimage import io, img_as_float, img_as_ubyte, exposure, transform, color
 import numpy as np
-import glob
+import glob, os
+from skimage.measure import shannon_entropy
 
-def thres_saturation(img, t=5):
+def is_background(img, t=10):
+    img_gray = color.rgb2gray(color.rgba2rgb(img))
+    etp = shannon_entropy(img_gray)
     img = color.rgb2hsv(img)
     h, w, c = img.shape
     sat_img = img[:, :, 1]
     sat_img = img_as_ubyte(sat_img)
     ave_sat = np.sum(sat_img)/(h*w)
-    return ave_sat >= t
+    return ave_sat < 2*t and etp < t
 
-def estimate_bg(path):
-    bgs = glob.glob(os.path.join(path, '*.tif'))
-    sum_img = img_as_float(io.imread(bgs[0]))
-    for bg in bgs:
-        bg_data = np.array(img_as_float(io.imread(bg)))
-        sum_img = sum_img + bg_data
-    sum_img = exposure.rescale_intensity(sum_img / len(bgs), out_range=(0, 1))
-    return sum_img
+def estimate_background(config, save_path, acq_name, position_list=None, mda=True):
+    sum_img = np.zeros((config["camera-resolution"][0], config["camera-resolution"][1], 3))
+    sum_count = 0
+    if mda:
+        data_path = glob.glob(save_path+'/'+acq_name+'*')[-1]
+        dataset = Dataset(data_path)
+    else:
+        image_list = glob.glob(os.path.join(glob.glob(save_path+'/'+acq_name+'*')[-1], '*.tiff'))
+    for pos_row in range(position_list.shape[0]):
+        for pos_col in range(position_list.shape[1]):
+            if mda:
+                img = dataset.read_image(position=pos_row*position_list.shape[1]+pos_col)
+            else:
+                img = io.imread(image_list[pos_row*position_list.shape[1]+pos_col])
+            if is_background(img):
+                sum_img = np.array(img_as_float(img)) + sum_img
+                sum_count = sum_count + 1
+    return sum_img / sum_count
 
 def white_balance(img, bg, gain=0.8):
     img = img_as_float(img)
