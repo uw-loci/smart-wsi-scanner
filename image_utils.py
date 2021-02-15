@@ -1,4 +1,5 @@
 import os, glob, shutil, sys, copy, time, json, copy
+from pycromanager import Dataset
 from skimage import io, img_as_ubyte, img_as_float, color, transform, exposure
 from skimage.filters import threshold_mean
 from skimage.measure import shannon_entropy
@@ -108,12 +109,13 @@ def flat_field(img, bg, gain=1):
     img[:, :, 2] = 1 * exposure.rescale_intensity(np.clip(np.divide(img[:, :, 2], bg[:, :, 2] + 0.00) * b * gain, 0, 1), in_range=(0, 0.85), out_range=(0, 1))
     return img
     
-def stitching(config, ij, save_path, acq_name, mod='bf', mag='4x', mda=True, z_stack=False, position_list=None, flip_x=False, flip_y=False, correction=False, background_image=None):
+def stitching(config, ij, save_path, acq_name, mod='bf', mag='4x', mda=True, z_stack=False, position_list=None, flip_x=False, flip_y=False, correction=False, background_image=None, move_stitched_image=True):
     position_list_flat = position_list.reshape(-1, 2)
     stitch_folder = os.path.join('data/stitching/tiles', acq_name)
     os.makedirs(stitch_folder, exist_ok=True)
     out_folder = os.path.join('data/stitching/stitched', acq_name)
     os.makedirs(out_folder, exist_ok=True)
+    os.makedirs('data/slides', exist_ok=True)
     if mod == 'bf':
         if mag == '20x':
             pixel_size = config["pixel-size-bf-20x"]
@@ -135,32 +137,31 @@ def stitching(config, ij, save_path, acq_name, mod='bf', mag='4x', mda=True, z_s
             print('dim = {}'.format(3), file=text_file)
         else:
             print('dim = {}'.format(2), file=text_file)
-        for pos_row in range(position_list.shape[0]):
-            for pos_col in range(position_list.shape[1]):
-                x = int(position_list[pos_row, pos_col, 0] / pixel_size)
-                y = int(position_list[pos_row, pos_col, 1] / pixel_size)
-                if z_stack:
-                    print('{}_{}.tiff; ; ({}, {}, {})'.format(pos_row, (position_list.shape[1] - pos_col), x, y, 0), file=text_file)
-                    z_idx = 0
-                    img_z_list = []
-                    while(dataset.has_image(position=pos_row*position_list.shape[1]+pos_col, z=z_idx)):
-                        img_z_list.append(dataset.read_image(position=pos_row*position_list.shape[1]+pos_col, z=z_idx))
-                        z_idx = z_idx+1
-                    img = np.stack(img_z_list, axis=0)
-                else:    
-                    print('{}_{}.tiff; ; ({}, {})'.format(pos_row, (position_list.shape[1] - pos_col), x, y), file=text_file)
-                    if mda:
-                        img = dataset.read_image(position=pos_row*position_list.shape[1]+pos_col)
-                    else:
-                        img = io.imread(image_list[pos_row*position_list.shape[1]+pos_col])
-                    if correction is True and background_image is not None:
-                        img = white_balance(img, background_image)
-                        img = flat_field(img, bg_img)
-                if flip_y:
-                    img = img[::-1, :]
-                if flip_x:
-                    img = img[:, ::-1]
-                io.imsave(stitch_folder+'/{}_{}.tiff'.format(pos_row, (position_list.shape[1] - pos_col)), img_as_ubyte(img))
+        for pos in range(position_list.shape[0]):
+            x = int(position_list[pos, 0] / pixel_size)
+            y = int(position_list[pos, 1] / pixel_size)
+            if z_stack:
+                print('{}.tiff; ; ({}, {}, {})'.format(pos, x, y, 0), file=text_file)
+                z_idx = 0
+                img_z_list = []
+                while(dataset.has_image(position=pos, z=z_idx)):
+                    img_z_list.append(dataset.read_image(position=pos, z=z_idx))
+                    z_idx = z_idx+1
+                img = np.stack(img_z_list, axis=0)
+            else:    
+                print('{}.tiff; ; ({}, {})'.format(pos, x, y), file=text_file)
+                if mda:
+                    img = dataset.read_image(position=pos)
+                else:
+                    img = io.imread(image_list[pos])
+                if correction is True and background_image is not None:
+                    img = white_balance(img, background_image)
+                    img = flat_field(img, bg_img)
+            if flip_y:
+                img = img[::-1, :]
+            if flip_x:
+                img = img[:, ::-1]
+            io.imsave(stitch_folder+'/{}.tiff'.format(pos), img_as_ubyte(img))
     sys.stdout.write('stitching, please wait...')
     temp_channel_folder = 'data/stitching/channel_temp'
     os.makedirs(temp_channel_folder, exist_ok=True)
@@ -188,4 +189,6 @@ def stitching(config, ij, save_path, acq_name, mod='bf', mag='4x', mda=True, z_s
                 c3 = io.imread(os.path.join(temp_channel_folder, list_channels[2]))
                 img_to_save = np.stack((c1, c2, c3)).transpose((1, 2, 0))
         io.imsave(os.path.join(out_folder, 'fused.tiff'), img_as_ubyte(img_to_save))
+        if move_stitched_image:
+            os.rename(os.path.join(out_folder, 'fused.tiff'), os.path.join('data/slides', acq_name+'.tiff'))
     shutil.rmtree(temp_channel_folder)

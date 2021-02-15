@@ -1,7 +1,7 @@
 createTiles = true
 
-double frameWidth = 1320
-double frameHeight = 1040
+double frameWidth = 256
+double frameHeight = 256
 double overlap = 50
 baseDirectory = PROJECT_BASE_DIR
 
@@ -15,7 +15,7 @@ newTiles = []
 annotations = getAnnotationObjects()
 imageName = getCurrentServer().getFile().getName()
 //Ensure the folder to store the csv exists
-tilePath = buildFilePath(baseDirectory, "Tiles csv")
+tilePath = buildFilePath(baseDirectory, "mp-tiles")
 mkdirs(tilePath)
 //CSV will be only two columns with the following header
 String header="x_pos,y_pos";
