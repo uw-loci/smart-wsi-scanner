@@ -25,8 +25,8 @@ def snap_image(core, rgb, flip_channel=True):
             )
     return pixels
 
-def live(core, mod='bf', flip_channel=True):
-    switch_mod(config, mod=mod)
+def live(config, core, mod='bf', flip_channel=True):
+    switch_mod(config, core, mod=mod)
     fig = plt.figure(figsize=(8, 6))
     plt.axis("off")
     if mod == 'bf':
@@ -51,7 +51,7 @@ def live(core, mod='bf', flip_channel=True):
             pass
     return pixels
 
-def switch_objective(config, mag='4x'): # brightfield
+def switch_objective(config, core, mag='4x'): # brightfield
     if mag == '4x':
         core.set_property('Turret:O:35', 'Label', 'Position-2')
         core.set_focus_device(config["condensor-device"])
@@ -69,7 +69,7 @@ def switch_objective(config, mag='4x'): # brightfield
         core.set_property(config["led-device"][0], config["led-device"][1], 5.0)
         core.wait_for_system() 
         
-def switch_mod(config, mod='shg'):
+def switch_mod(config, core, mod='shg'):
     current_objective = core.get_property('Turret:O:35', 'Label')
     if mod == 'shg':
         if current_objective == 'Position-2':
@@ -93,7 +93,7 @@ def switch_mod(config, mod='shg'):
     if mod == 'bf':
         core.set_config('Imaging', 'Camera')
         if current_objective == 'Position-2':
-            switch_objective(config, '4x')
+            switch_objective(config, core, '4x')
         if current_objective == 'Position-1': 
-            switch_objective(config, '20x')  
+            switch_objective(config, core, '20x')  
         print('Imaging mode set as Brightfield')

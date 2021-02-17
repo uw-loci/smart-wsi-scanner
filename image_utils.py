@@ -104,9 +104,9 @@ def flat_field(img, bg, gain=1):
     r = np.mean(bg[:, :, 0])
     g = np.mean(bg[:, :, 1])
     b = np.mean(bg[:, :, 2])
-    img[:, :, 0] = 1 * exposure.rescale_intensity(np.clip(np.divide(img[:, :, 0], bg[:, :, 0] + 0.00) * r * gain, 0, 1), in_range=(0, 0.85), out_range=(0, 1))
-    img[:, :, 1] = 1 * exposure.rescale_intensity(np.clip(np.divide(img[:, :, 1], bg[:, :, 1] + 0.00) * g * gain, 0, 1), in_range=(0, 0.85), out_range=(0, 1))
-    img[:, :, 2] = 1 * exposure.rescale_intensity(np.clip(np.divide(img[:, :, 2], bg[:, :, 2] + 0.00) * b * gain, 0, 1), in_range=(0, 0.85), out_range=(0, 1))
+    img[:, :, 0] = 1 * exposure.rescale_intensity(np.clip(np.divide(img[:, :, 0], bg[:, :, 0] + 0.00) * r * gain, 0, 1), in_range=(0, 0.95), out_range=(0, 1))
+    img[:, :, 1] = 1 * exposure.rescale_intensity(np.clip(np.divide(img[:, :, 1], bg[:, :, 1] + 0.00) * g * gain, 0, 1), in_range=(0, 0.95), out_range=(0, 1))
+    img[:, :, 2] = 1 * exposure.rescale_intensity(np.clip(np.divide(img[:, :, 2], bg[:, :, 2] + 0.00) * b * gain, 0, 1), in_range=(0, 0.95), out_range=(0, 1))
     return img
     
 def stitching(config, ij, save_path, acq_name, mod='bf', mag='4x', mda=True, z_stack=False, position_list=None, flip_x=False, flip_y=False, correction=False, background_image=None, move_stitched_image=True):
@@ -161,6 +161,7 @@ def stitching(config, ij, save_path, acq_name, mod='bf', mag='4x', mda=True, z_s
                 img = img[::-1, :]
             if flip_x:
                 img = img[:, ::-1]
+                os.stdout.write('\r Processing tiles: {}/{}'.format(pos+1, position_list.shape[0]))
             io.imsave(stitch_folder+'/{}.tiff'.format(pos), img_as_ubyte(img))
     sys.stdout.write('stitching, please wait...')
     temp_channel_folder = 'data/stitching/channel_temp'
@@ -179,16 +180,23 @@ def stitching(config, ij, save_path, acq_name, mod='bf', mag='4x', mda=True, z_s
             fused_list = []
             for channel in list_channels:
                 fused_list.append(io.imread(os.path.join(temp_channel_folder, channel)))
-            img_to_save = np.stack(fused_list, axis=0)
+            img_to_save = img_as_ubyte(np.stack(fused_list, axis=0))
         else:
             if len(list_channels) == 1:
                 img_to_save = io.imread(os.path.join(temp_channel_folder, list_channels[0]))
             else:
-                c1 = io.imread(os.path.join(temp_channel_folder, list_channels[0]))
-                c2 = io.imread(os.path.join(temp_channel_folder, list_channels[1]))
-                c3 = io.imread(os.path.join(temp_channel_folder, list_channels[2]))
+                c1 = img_as_ubyte(io.imread(os.path.join(temp_channel_folder, list_channels[0])))
+                c2 = img_as_ubyte(io.imread(os.path.join(temp_channel_folder, list_channels[1])))
+                c3 = img_as_ubyte(io.imread(os.path.join(temp_channel_folder, list_channels[2])))
                 img_to_save = np.stack((c1, c2, c3)).transpose((1, 2, 0))
-        io.imsave(os.path.join(out_folder, 'fused.tiff'), img_as_ubyte(img_to_save))
-        if move_stitched_image:
-            os.rename(os.path.join(out_folder, 'fused.tiff'), os.path.join('data/slides', acq_name+'.tiff'))
+    if mod == 'shg':
+        if z_stack:
+            fused_list = []
+            for channel in list_channels:
+                fused_list.append(io.imread(os.path.join(temp_channel_folder, channel)))
+            img_to_save = img_as_ubyte(np.stack(fused_list, axis=0))
+            
+    io.imsave(os.path.join(out_folder, 'fused.jpg'), img_to_save)        
+    if move_stitched_image:
+        os.rename(os.path.join(out_folder, 'fused.jpg'), os.path.join('data/slides', acq_name+'.jpg'))
     shutil.rmtree(temp_channel_folder)
