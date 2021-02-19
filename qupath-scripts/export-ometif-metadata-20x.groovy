@@ -17,9 +17,9 @@ println 'Reading image...'
 //def img = ij.IJ.openImage(pathInput).getBufferedImage()
 //def server = new WrappedBufferedImageServer("Anything", img)
 def metadataNew = new ImageServerMetadata.Builder(server.getMetadata())
-    .pixelSizeMicrons(1.16, 1.16)
+    .pixelSizeMicrons(0.256, 0.256)
     .zSpacingMicrons(1)
-	.magnification(4)
+	.magnification(20)
     .build();
     
 imageData.updateServerMetadata(metadataNew);

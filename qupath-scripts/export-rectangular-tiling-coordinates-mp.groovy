@@ -1,10 +1,16 @@
 createTiles = true
 
-double frameWidth = 256
-double frameHeight = 256
-double overlap = 50
+double frameWidth = 512/5.078
+double frameHeight = 512/5.078
+double overlap = 50/5.078
 baseDirectory = PROJECT_BASE_DIR
 
+/***********************************************/
+
+Logger logger = LoggerFactory.getLogger(QuPathGUI.class);
+
+imageData = getQuPath().getImageData()
+hierarchy = imageData.getHierarchy()
 clearDetections()
 //Potentially store tiles as they are created
 newTiles = []
@@ -12,8 +18,9 @@ newTiles = []
 //Store XY coordinates in an array
 
 //Check all annotations. Use .findAll{expression} to select a subset
-annotations = getAnnotationObjects()
-imageName = getCurrentServer().getFile().getName()
+annotations = hierarchy.getAnnotationObjects()
+imageName = GeneralTools.getNameWithoutExtension(getQuPath().getProject().getEntry(imageData).getImageName())
+logger.info(imageName.toString())
 //Ensure the folder to store the csv exists
 tilePath = buildFilePath(baseDirectory, "mp-tiles")
 mkdirs(tilePath)
@@ -33,17 +40,22 @@ annotations.eachWithIndex{a,i->
     while (x< bBoxX+bBoxW){
         y = bBoxY
         while (y < bBoxY+bBoxH){
-            if(createTiles==true){createATile(x, y, frameWidth, frameHeight, overlap, roiA)}
-
+            if(createTiles==true){
+                intersect=createATile(x, y, frameWidth, frameHeight, overlap, roiA)
+            }
+            if(intersect){xy << [x,y]}
             y = y+frameHeight-overlap
-            xy << [x,y]
+
         }
         x = x+frameWidth-overlap
     }
+    hierarchy.addPathObjects(newTiles)
     //Does not use CLASS of annotation in the name at the moment.
-    path = buildFilePath(baseDirectory, "Tiles csv", imageName+i+".csv")
+    path = buildFilePath(baseDirectory, "mp-tiles", imageName+i+".csv")
+    //logger.info(path.toString())
     new File(path).withWriter { fw ->
         fw.writeLine(header)
+        //logger.info(header)
         //Make sure everything being sent is a child and part of the current annotation.
         
         xy.each{
@@ -53,24 +65,22 @@ annotations.eachWithIndex{a,i->
     }
 }
 
-
-//Comment out to avoid visual tiles.
-if(createTiles==true){
-    addObjects(newTiles)
-    resolveHierarchy()
-}
-print " "
-print "Output saved in  folder at " + tilePath
-
-
-print "done"
-
-def createATile(x,y,width,height, overlap, roiA) {
+boolean createATile(x,y,width,height, overlap, roiA) {
     def roi = new RectangleROI(x,y,width,height, ImagePlane.getDefaultPlane())
     if(roiA.getGeometry().intersects(roi.getGeometry())){
         newTiles << PathObjects.createDetectionObject(roi)
-    }
+        return true;
+    }else{ return false;}
 }
 
+import qupath.imagej.gui.IJExtension
+import qupath.imagej.tools.IJTools
+import qupath.lib.objects.PathObjectTools
+import qupath.lib.regions.RegionRequest
 import qupath.lib.regions.ImagePlane
 import qupath.lib.roi.RectangleROI;
+import qupath.lib.gui.QuPathGUI
+
+import static qupath.lib.gui.scripting.QPEx.*
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;

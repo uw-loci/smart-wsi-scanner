@@ -129,8 +129,8 @@ def stitching(config, ij, save_path, acq_name, mod='bf', mag='4x', mda=True, z_s
     else:
         image_list = glob.glob(os.path.join(glob.glob(save_path+'/'+acq_name+'*')[-1], '*.tiff'))
         image_list.sort(key=lambda x: os.path.getmtime(x))
-        image_list = image_list[0:-1]
     if correction is True and background_image is not None:
+        image_list = image_list[0:-1]
         bg_img = white_balance(copy.deepcopy(background_image), copy.deepcopy(background_image))
     with open(os.path.join(stitch_folder, 'TileConfiguration.txt'), 'w') as text_file:
         if z_stack:
@@ -161,9 +161,9 @@ def stitching(config, ij, save_path, acq_name, mod='bf', mag='4x', mda=True, z_s
                 img = img[::-1, :]
             if flip_x:
                 img = img[:, ::-1]
-                os.stdout.write('\r Processing tiles: {}/{}'.format(pos+1, position_list.shape[0]))
+            sys.stdout.write('\r Processing tiles: {}/{}'.format(pos+1, position_list.shape[0]))
             io.imsave(stitch_folder+'/{}.tiff'.format(pos), img_as_ubyte(img))
-    sys.stdout.write('stitching, please wait...')
+    sys.stdout.write('\n stitching, please wait...')
     temp_channel_folder = 'data/stitching/channel_temp'
     os.makedirs(temp_channel_folder, exist_ok=True)
     params = {'type': 'Positions from file', 'order': 'Defined by TileConfiguration', 
@@ -174,29 +174,45 @@ def stitching(config, ij, save_path, acq_name, mod='bf', mag='4x', mda=True, z_s
             'image_output': 'Write to disk', 'output_directory': temp_channel_folder}
     plugin = "Grid/Collection stitching"
     ij.py.run_plugin(plugin, params)
-    if mod == 'bf':
-        list_channels = [f for f in os.listdir(temp_channel_folder)]
-        if z_stack:
-            fused_list = []
-            for channel in list_channels:
-                fused_list.append(io.imread(os.path.join(temp_channel_folder, channel)))
-            img_to_save = img_as_ubyte(np.stack(fused_list, axis=0))
-        else:
-            if len(list_channels) == 1:
-                img_to_save = io.imread(os.path.join(temp_channel_folder, list_channels[0]))
-            else:
-                c1 = img_as_ubyte(io.imread(os.path.join(temp_channel_folder, list_channels[0])))
-                c2 = img_as_ubyte(io.imread(os.path.join(temp_channel_folder, list_channels[1])))
-                c3 = img_as_ubyte(io.imread(os.path.join(temp_channel_folder, list_channels[2])))
-                img_to_save = np.stack((c1, c2, c3)).transpose((1, 2, 0))
-    if mod == 'shg':
-        if z_stack:
-            fused_list = []
-            for channel in list_channels:
-                fused_list.append(io.imread(os.path.join(temp_channel_folder, channel)))
-            img_to_save = img_as_ubyte(np.stack(fused_list, axis=0))
-            
-    io.imsave(os.path.join(out_folder, 'fused.jpg'), img_to_save)        
+    
+    if mod=='bf': 
+        macro = """
+            #@ String inDir
+            #@ String outDir
+            slices = getFileList(inDir);
+            for (i=0;i<lengthOf(slices);i=i+1) {
+                filePath = inDir + '/' + slices[i];
+                open(filePath);
+            }
+            run("Merge Channels...", "c1=img_t1_z1_c1 c2=img_t1_z1_c2 c3=img_t1_z1_c3 create");
+            saveAs("Tiff", outDir);
+            """
+    if mod=='shg':
+        macro = """
+            #@ String inDir
+            #@ String outDir
+            slices = getFileList(inDir);
+            for (i=0;i<lengthOf(slices);i=i+1) {
+                filePath = inDir + '/' + slices[i];
+                open(filePath);
+            }
+            run("Images to Stack", "name=Stack title=[] use");;
+            saveAs("Tiff", outDir);
+            run("Z Project...", "projection=[Max Intensity]");
+            saveAs("Tiff", outDir);
+            """
+
     if move_stitched_image:
-        os.rename(os.path.join(out_folder, 'fused.jpg'), os.path.join('data/slides', acq_name+'.jpg'))
+        args = {
+                'inDir' : os.path.join(os.getcwd(), temp_channel_folder),
+                'outDir' : os.path.join(os.getcwd(), os.path.join('data/slides', acq_name+'.tif'))
+            }
+    else:
+        args = {
+                'inDir' : os.path.join(os.getcwd(), temp_channel_folder),
+                'outDir' : os.path.join(os.getcwd(), os.path.join(out_folder, 'fused.tif'))
+            }
+
+    result = ij.py.run_macro(macro, args)
     shutil.rmtree(temp_channel_folder)
+#     shutil.rmtree(stitch_folder)
