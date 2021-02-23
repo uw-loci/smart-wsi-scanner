@@ -47,25 +47,20 @@ def bounding_image(config, image, box=None):
         plt.show()
         return low_box_bounded # bounding box in real stage position (x, y, x, y)
     
-def is_background(img, t=10):
+def is_background(img, t=0.2):
 #     img = transform.resize(img, (1024, 1024))
+    patch_h = int(img.shape[0]/8)
+    patch_w = int(img.shape[1]/8)
     img = color.rgb2hsv(img)
-    img_windows = np.squeeze(view_as_windows(img, (256, 256, 3), step=256))
-    empty=True
-    img_windows = np.reshape(img_windows, (img_windows.shape[0]*img_windows.shape[1], 256, 256, 3)) # nxm, 256, 256, 3
+    img_windows = np.squeeze(view_as_windows(img, (patch_h, patch_w, 3), step=(patch_h, patch_w, 3)))
+    img_windows = np.reshape(img_windows, (img_windows.shape[0]*img_windows.shape[1], patch_h, patch_w, 3)) # nxm, 256, 256, 3
     img_max = np.max(img_windows, axis=0) # 256x256x3
+    img_min = np.min(img_windows, axis=0) # 256x256x3
     sat_img = img_max[:, :, 1]
-    ave_sat = np.sum(sat_img)/(256*256)
-#     print(ave_sat)
-    return ave_sat < 0.35
-#     img_gray = color.rgb2gray(color.rgba2rgb(img))
-#     etp = shannon_entropy(img_gray)
-#     img = color.rgb2hsv(img)
-#     h, w, c = img.shape
-#     sat_img = img[:, :, 1]
-#     sat_img = img_as_ubyte(sat_img)
-#     ave_sat = np.sum(sat_img)/(h*w)
-#     return ave_sat < 2*t and etp < t
+    bright_img = 1-img_min[:, :, 2]
+    ave_sat = np.sum(sat_img)/(patch_h*patch_w)
+    ave_bright = np.sum(bright_img)/(patch_h*patch_w)
+    return ave_sat < t and ave_bright < t*2
 
 def estimate_background(config, save_path, acq_name, position_list=None, mda=True):
     sum_img = np.zeros((config["camera-resolution"][0], config["camera-resolution"][1], 3))
@@ -109,19 +104,19 @@ def flat_field(img, bg, gain=1):
     img[:, :, 2] = 1 * exposure.rescale_intensity(np.clip(np.divide(img[:, :, 2], bg[:, :, 2] + 0.00) * b * gain, 0, 1), in_range=(0, 0.95), out_range=(0, 1))
     return img
     
-def stitching(config, ij, save_path, acq_name, mod='bf', mag='4x', mda=True, z_stack=False, position_list=None, flip_x=False, flip_y=False, correction=False, background_image=None, move_stitched_image=True):
+def stitching(config, ij, save_path, acq_name, mag='4x', mda=True, z_stack=False, position_list=None, flip_x=False, flip_y=False, rotate=None, correction=False, background_image=None, move_stitched_image=True):
     position_list_flat = position_list.reshape(-1, 2)
     stitch_folder = os.path.join('data/stitching/tiles', acq_name)
     os.makedirs(stitch_folder, exist_ok=True)
     out_folder = os.path.join('data/stitching/stitched', acq_name)
     os.makedirs(out_folder, exist_ok=True)
-    os.makedirs('data/slides', exist_ok=True)
-    if mod == 'bf':
-        if mag == '20x':
-            pixel_size = config["pixel-size-bf-20x"]
-        if mag == '4x':
-            pixel_size = config["pixel-size-bf-4x"]
-    else:
+    slide_folder = os.path.join('data/slides', mag)
+    os.makedirs(slide_folder, exist_ok=True)
+    if mag == '20x':
+        pixel_size = config["pixel-size-bf-20x"]
+    if mag == '4x':
+        pixel_size = config["pixel-size-bf-4x"]
+    if mag == 'mp':
         pixel_size = config["pixel-size-shg"]
     if mda:
         data_path = glob.glob(save_path+'/'+acq_name+'*')[-1]
@@ -145,7 +140,12 @@ def stitching(config, ij, save_path, acq_name, mod='bf', mag='4x', mda=True, z_s
                 z_idx = 0
                 img_z_list = []
                 while(dataset.has_image(position=pos, z=z_idx)):
-                    img_z_list.append(dataset.read_image(position=pos, z=z_idx))
+                    img = dataset.read_image(position=pos, z=z_idx)
+                    if correction is True and background_image is None:
+                        img = exposure.rescale_intensity(img, in_range=(6500, 12000), out_range=(0, 1))
+                    if rotate is not None:
+                        img = transform.rotate(np.array(img), rotate)
+                    img_z_list.append(img)
                     z_idx = z_idx+1
                 img = np.stack(img_z_list, axis=0)
             else:    
@@ -157,6 +157,9 @@ def stitching(config, ij, save_path, acq_name, mod='bf', mag='4x', mda=True, z_s
                 if correction is True and background_image is not None:
                     img = white_balance(img, background_image)
                     img = flat_field(img, bg_img)
+                if rotate is not None:
+                    img = transform.rotate(img, rotate)
+#             print(img)
             if flip_y:
                 img = img[::-1, :]
             if flip_x:
@@ -175,7 +178,7 @@ def stitching(config, ij, save_path, acq_name, mod='bf', mag='4x', mda=True, z_s
     plugin = "Grid/Collection stitching"
     ij.py.run_plugin(plugin, params)
     
-    if mod=='bf': 
+    if mag=='20x' or mag=='4x': 
         macro = """
             #@ String inDir
             #@ String outDir
@@ -187,7 +190,7 @@ def stitching(config, ij, save_path, acq_name, mod='bf', mag='4x', mda=True, z_s
             run("Merge Channels...", "c1=img_t1_z1_c1 c2=img_t1_z1_c2 c3=img_t1_z1_c3 create");
             saveAs("Tiff", outDir);
             """
-    if mod=='shg':
+    if mod=='mp':
         macro = """
             #@ String inDir
             #@ String outDir
@@ -205,7 +208,7 @@ def stitching(config, ij, save_path, acq_name, mod='bf', mag='4x', mda=True, z_s
     if move_stitched_image:
         args = {
                 'inDir' : os.path.join(os.getcwd(), temp_channel_folder),
-                'outDir' : os.path.join(os.getcwd(), os.path.join('data/slides', acq_name+'.tif'))
+                'outDir' : os.path.join(os.getcwd(), os.path.join(slide_folder, acq_name+'.tif'))
             }
     else:
         args = {

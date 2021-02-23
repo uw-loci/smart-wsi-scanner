@@ -10,4 +10,5 @@ BIC14011b/
 QuPath-0.2.3/
 examples/
 qupath-projects/
+*.log
 
