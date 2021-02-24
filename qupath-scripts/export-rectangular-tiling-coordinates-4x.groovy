@@ -1,8 +1,10 @@
 createTiles = true
 
-double frameWidth = 1392
-double frameHeight = 1040
-double overlap = 50
+double pixelSizeSource = 1.305
+double pixelSizeTarget = 1.305
+double frameWidth = 1392 / pixelSizeSource * pixelSizeTarget
+double frameHeight = 1040 / pixelSizeSource * pixelSizeTarget
+double overlap = 50 * pixelSizeSource * pixelSizeTarget
 baseDirectory = PROJECT_BASE_DIR
 
 /***********************************************/

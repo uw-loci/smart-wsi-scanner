@@ -47,7 +47,7 @@ def bounding_image(config, image, box=None):
         plt.show()
         return low_box_bounded # bounding box in real stage position (x, y, x, y)
     
-def is_background(img, t=0.2):
+def is_background(img, t=0.275):
 #     img = transform.resize(img, (1024, 1024))
     patch_h = int(img.shape[0]/8)
     patch_w = int(img.shape[1]/8)
@@ -105,7 +105,7 @@ def flat_field(img, bg, gain=1):
     return img
     
 def stitching(config, ij, save_path, acq_name, mag='4x', mda=True, z_stack=False, position_list=None, flip_x=False, flip_y=False, rotate=None, correction=False, background_image=None, move_stitched_image=True):
-    position_list_flat = position_list.reshape(-1, 2)
+#     position_list_flat = position_list.reshape(-1, 2)
     stitch_folder = os.path.join('data/stitching/tiles', acq_name)
     os.makedirs(stitch_folder, exist_ok=True)
     out_folder = os.path.join('data/stitching/stitched', acq_name)
@@ -189,8 +189,9 @@ def stitching(config, ij, save_path, acq_name, mag='4x', mda=True, z_stack=False
             }
             run("Merge Channels...", "c1=img_t1_z1_c1 c2=img_t1_z1_c2 c3=img_t1_z1_c3 create");
             saveAs("Tiff", outDir);
+            close("*");
             """
-    if mod=='mp':
+    if mag=='mp':
         macro = """
             #@ String inDir
             #@ String outDir
@@ -203,6 +204,7 @@ def stitching(config, ij, save_path, acq_name, mag='4x', mda=True, z_stack=False
             saveAs("Tiff", outDir);
             run("Z Project...", "projection=[Max Intensity]");
             saveAs("Tiff", outDir);
+            close("*");
             """
 
     if move_stitched_image:
