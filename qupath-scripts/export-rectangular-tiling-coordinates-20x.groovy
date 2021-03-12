@@ -1,7 +1,7 @@
 createTiles = true
 
-double pixelSizeSource = 1.305
-double pixelSizeTarget = 0.256
+double pixelSizeSource = 1.105
+double pixelSizeTarget = 0.222
 double frameWidth = 1392 / pixelSizeSource * pixelSizeTarget
 double frameHeight = 1040 / pixelSizeSource * pixelSizeTarget
 double overlap = 50 * pixelSizeSource * pixelSizeTarget
@@ -53,7 +53,7 @@ annotations.eachWithIndex{a,i->
     }
     hierarchy.addPathObjects(newTiles)
     //Does not use CLASS of annotation in the name at the moment.
-    path = buildFilePath(baseDirectory, "20x-tiles", imageName+i+".csv")
+    path = buildFilePath(baseDirectory, "20x-tiles", imageName+"-"+i+".csv")
     //logger.info(path.toString())
     new File(path).withWriter { fw ->
         fw.writeLine(header)

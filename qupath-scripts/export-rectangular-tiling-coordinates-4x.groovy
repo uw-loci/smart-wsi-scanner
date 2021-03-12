@@ -1,7 +1,7 @@
 createTiles = true
 
-double pixelSizeSource = 1.305
-double pixelSizeTarget = 1.305
+double pixelSizeSource = 1.098
+double pixelSizeTarget = 1.098
 double frameWidth = 1392 / pixelSizeSource * pixelSizeTarget
 double frameHeight = 1040 / pixelSizeSource * pixelSizeTarget
 double overlap = 50 * pixelSizeSource * pixelSizeTarget

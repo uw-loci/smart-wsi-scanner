@@ -47,7 +47,7 @@ def bounding_image(config, image, box=None):
         plt.show()
         return low_box_bounded # bounding box in real stage position (x, y, x, y)
     
-def is_background(img, t=0.275):
+def is_background(img, t=0.2):
 #     img = transform.resize(img, (1024, 1024))
     patch_h = int(img.shape[0]/8)
     patch_w = int(img.shape[1]/8)
@@ -142,7 +142,7 @@ def stitching(config, ij, save_path, acq_name, mag='4x', mda=True, z_stack=False
                 while(dataset.has_image(position=pos, z=z_idx)):
                     img = dataset.read_image(position=pos, z=z_idx)
                     if correction is True and background_image is None:
-                        img = exposure.rescale_intensity(img, in_range=(6500, 12000), out_range=(0, 1))
+                        img = exposure.rescale_intensity(img, in_range=(6250, 12500), out_range=(0, 1))
                     if rotate is not None:
                         img = transform.rotate(np.array(img), rotate)
                     img_z_list.append(img)

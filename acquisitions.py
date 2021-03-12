@@ -58,7 +58,7 @@ def switch_objective(config, core, mag='4x'): # brightfield
         core.set_position(config["F-stage-4x"])
         core.set_focus_device(config["focus-device"])
         core.set_position(config["Z-stage-4x"])
-        core.set_property(config["led-device"][0], config["led-device"][1], 5.0)
+        core.set_property(config["led-device"][0], config["led-device"][1], 4)
         core.wait_for_system()
     if mag == '20x':
         core.set_property(config["obj-device"][0], config["obj-device"][1], 'Position-1')
