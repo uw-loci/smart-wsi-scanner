@@ -156,3 +156,82 @@ def resample_z_pos(config, mag='20x', xy_pos=None, xyz_pos_list_4x=None, xyz_pos
             z_pos = xyz_pos_list_20x[idx, 2] + z_offset
             xyz_list[i, :] = np.array([x_pos_source, y_pos_source, z_pos])
     return xyz_list # x, y, z
+
+def generate_grid(config, mag='4x', mod='bf', box=None, overlap=50, xyz_pos_list=None, z_offset=0):
+    if box is not None:
+        s_x = box[0]
+        s_y = box[1]
+        e_x = box[2]
+        e_y = box[3]
+    else:
+        s_x = config["slide-start"][0]
+        s_y = config["slide-start"][1]
+        e_x = config["slide-start"][0] + config["slide-size"][0]
+        e_y = config["slide-start"][1] + config["slide-size"][1]
+    if mod == 'bf':
+        if mag == '20x':
+            pixel_size = config["pixel-size-bf-20x"]
+        if mag == '4x':
+            pixel_size = config["pixel-size-bf-4x"]
+        field_w = config["camera-resolution"][0] * pixel_size
+        field_h = config["camera-resolution"][1] * pixel_size
+    if mod == 'shg':
+        if mag == '20x':
+            pixel_size = config["pixel-size-shg"]
+        if mag == '4x':
+            raise ValueError('Not supported magnification for LSM')
+        field_w = config["lsm-resolution"] * pixel_size
+        field_h = config["lsm-resolution"] * pixel_size
+    field_o = overlap * pixel_size
+    grid_w = int(np.ceil((e_x - s_x) / (field_w - field_o)))
+    grid_h = int(np.ceil((e_y - s_y) / (field_h - field_o)))
+    xy_list = np.zeros((grid_h, grid_w, 2))
+    for x in range(grid_w):
+        for y in range(grid_h):
+            x_pos = x * (field_w - field_o) + s_x
+            y_pos = y * (field_h - field_o) + s_y
+            xy_list[y, x] = [x_pos, y_pos] # x, y
+    return xy_list # row, col
+
+
+def export_slide(mag='4x', remove_file=True):
+    print('exporting slides, please wait...')
+    if mag=='4x':
+        script = os.path.join('qupath-projects', 'scripts', 'export-ometif-metadata-4x.groovy')
+    if mag=='20x':
+        script = os.path.join('qupath-projects', 'scripts', 'export-ometif-metadata-20x.groovy')
+    if mag=='mp':
+        script = os.path.join('qupath-projects', 'scripts', 'export-ometif-metadata-mp.groovy')       
+    qupath = os.path.join('QuPath-0.2.3', 'QuPath-0.2.3.exe')
+    image_dirs = glob.glob(os.path.join('data', 'slides', mag, '*.tif'))
+    for img_dir in image_dirs:
+        if img_dir.find("ome") != -1:
+            continue
+        subprocess.run([qupath, "script", script, "-i", img_dir], shell=True)
+        if remove_file:
+            os.remove(img_dir)
+        
+def annotations_positionlist(config, image_name, in_mag='4x', out_mag='4x', box=(0, 0, 0, 0)):
+    pos_lists = []
+    if in_mag == '4x':
+        pixel_size = config["pixel-size-bf-4x"]
+        if out_mag == '4x':
+            annotations = glob.glob(os.path.join('qupath-projects', '4x-tiles', image_name+'*.csv'))
+            off_set = (0, 0)
+        if out_mag == '20x':
+            annotations = glob.glob(os.path.join('qupath-projects', '20x-tiles', image_name+'*.csv'))
+            off_set = config["20x-bf-offset"]
+        if out_mag == 'mp':
+            annotations = glob.glob(os.path.join('qupath-projects', 'mp-tiles', image_name+'*.csv'))
+            off_set = config["shg-offset"]
+    annotations.sort()
+    annotation_names = []
+    for annotation in annotations:
+        df = pd.read_csv(annotation)
+        pos_list = np.array(df)
+        pos_list[:, 0] = (pos_list[:, 0]*pixel_size + box[0] + off_set[0])
+        pos_list[:, 1] = (pos_list[:, 1]*pixel_size + box[1] + off_set[1])
+        pos_lists.append(pos_list)
+        annotation_name = annotation.split(image_name)[-1].split('.')[0]
+        annotation_names.append(annotation_name)
+    return pos_lists, annotation_names # list of (x_pos, y_pos) array
