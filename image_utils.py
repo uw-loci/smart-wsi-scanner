@@ -1,6 +1,6 @@
 import os, glob, shutil, sys, copy, time, json, copy
 from pycromanager import Dataset
-from skimage import io, img_as_ubyte, img_as_float, color, transform, exposure
+from skimage import io, img_as_ubyte, img_as_float, img_as_uint, color, transform, exposure
 from skimage.filters import threshold_mean
 from skimage.measure import shannon_entropy
 from skimage.util import view_as_windows, crop
@@ -47,7 +47,7 @@ def bounding_image(config, image, box=None):
         plt.show()
         return low_box_bounded # bounding box in real stage position (x, y, x, y)
     
-def is_background(img, t=0.2):
+def is_background(img, t=0.18):
 #     img = transform.resize(img, (1024, 1024))
     patch_h = int(img.shape[0]/8)
     patch_w = int(img.shape[1]/8)
@@ -141,8 +141,17 @@ def stitching(config, ij, save_path, acq_name, mag='4x', mda=True, z_stack=False
                 img_z_list = []
                 while(dataset.has_image(position=pos, z=z_idx)):
                     img = dataset.read_image(position=pos, z=z_idx)
-                    if correction is True and background_image is None:
-                        img = exposure.rescale_intensity(img, in_range=(6250, 12500), out_range=(0, 1))
+                    if correction == 'high' and background_image is None:
+                        img = exposure.rescale_intensity(img, in_range=(6000, 14000), out_range=(0, 1))
+                        img = exposure.adjust_gamma(img, 0.9)
+                    if correction == 'mid' and background_image is None:
+                        img = exposure.rescale_intensity(img, in_range=(6150, 11000), out_range=(0, 1))
+                        img = exposure.adjust_gamma(img, 0.8)
+                    if correction == 'low' and background_image is None:
+                        img = exposure.rescale_intensity(img, in_range=(6450, 9200), out_range=(0, 1))
+                        img = exposure.adjust_gamma(img, 0.6)
+                    if correction is None:
+                        img = img_as_float(img)
                     if rotate is not None:
                         img = transform.rotate(np.array(img), rotate)
                     img_z_list.append(img)
@@ -221,3 +230,24 @@ def stitching(config, ij, save_path, acq_name, mag='4x', mda=True, z_stack=False
     result = ij.py.run_macro(macro, args)
     shutil.rmtree(temp_channel_folder)
 #     shutil.rmtree(stitch_folder)
+
+def lsm_process_fn(config):
+    if config["snr-level"]=="low":
+        def img_process_fn(image, metadata):
+            image = exposure.rescale_intensity(image, in_range=(6600, 9200), out_range=(0, 1))
+            image = exposure.adjust_gamma(image, 0.6)
+            image = img_as_uint(image)
+            return image, metadata
+    if config["snr-level"]=="mid":
+        def img_process_fn(image, metadata):
+            image = exposure.rescale_intensity(image, in_range=(6200, 11000), out_range=(0, 1))
+            image = exposure.adjust_gamma(image, 0.8)
+            image = img_as_uint(image)
+            return image, metadata
+    if config["snr-level"]=="high":
+        def img_process_fn(image, metadata):
+            image = exposure.rescale_intensity(image, in_range=(6000, 14000), out_range=(0, 1))
+            image = exposure.adjust_gamma(image, 0.9)
+            image = img_as_uint(image)
+            return image, metadata
+    return img_process_fn
