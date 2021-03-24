@@ -1,10 +1,11 @@
-import os, glob, shutil, sys, copy, time, json, copy
+import os, glob, shutil, sys, copy, time, json, copy, subprocess
 from IPython import display
 from tqdm import tqdm
 from pycromanager import Acquisition, Bridge, Dataset, multi_d_acquisition_events
 from skimage import io, img_as_ubyte, img_as_float, color, transform, exposure
 from PIL import Image
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 
 def snap_image(core, rgb, flip_channel=True):
