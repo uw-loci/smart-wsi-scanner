@@ -28,11 +28,11 @@ def bounding_image(config, image, box=None):
             box_s_y = min(np.argwhere(imgh>imgh_m*1.5))[0] * 100
             box_e_x = max(np.argwhere(imgw>imgw_m*1.5))[0] * 100
             box_e_y = max(np.argwhere(imgh>imgh_m*1.5))[0] * 100
-            start = config["slide-start"]
-            low_box_bounded = (config["slide-start"][0] + config["pixel-size-bf-4x"] * box_s_x,
-                               config["slide-start"][1] + config["pixel-size-bf-4x"] * box_s_y,
-                               config["slide-start"][0] + config["pixel-size-bf-4x"] * box_e_x,
-                               config["slide-start"][1] + config["pixel-size-bf-4x"] * box_e_y,
+            start = config["slide-box"]
+            low_box_bounded = (config["slide-box"][0] + config["pixel-size-bf-4x"] * box_s_x,
+                               config["slide-box"][1] + config["pixel-size-bf-4x"] * box_s_y,
+                               config["slide-box"][0] + config["pixel-size-bf-4x"] * box_e_x,
+                               config["slide-box"][1] + config["pixel-size-bf-4x"] * box_e_y,
                               )
         else:
             box_s_x = box[0] / config["pixel-size-bf-4x"]
@@ -237,17 +237,26 @@ def lsm_process_fn(config):
             image = exposure.rescale_intensity(image, in_range=(6600, 9200), out_range=(0, 1))
             image = exposure.adjust_gamma(image, 0.6)
             image = img_as_uint(image)
+            if config["enhancement-type"] is not None:
+                image = config["enhancer"].compute(image)
+                image = img_as_uint(image)
             return image, metadata
     if config["snr-level"]=="mid":
         def img_process_fn(image, metadata):
             image = exposure.rescale_intensity(image, in_range=(6200, 11000), out_range=(0, 1))
             image = exposure.adjust_gamma(image, 0.8)
             image = img_as_uint(image)
+            if config["enhancement-type"] is not None:
+                image = config["enhancer"].compute(image)
+                image = img_as_uint(image)
             return image, metadata
     if config["snr-level"]=="high":
         def img_process_fn(image, metadata):
             image = exposure.rescale_intensity(image, in_range=(6000, 14000), out_range=(0, 1))
             image = exposure.adjust_gamma(image, 0.9)
             image = img_as_uint(image)
+            if config["enhancement-type"] is not None:
+                image = config["enhancer"].compute(image)
+                image = img_as_uint(image)
             return image, metadata
     return img_process_fn

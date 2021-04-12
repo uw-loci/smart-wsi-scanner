@@ -11,4 +11,6 @@ QuPath-0.2.3/
 examples/
 qupath-projects/
 *.log
+denoise/
+model-weights/
 

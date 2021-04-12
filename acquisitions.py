@@ -158,17 +158,11 @@ def resample_z_pos(config, mag='20x', xy_pos=None, xyz_pos_list_4x=None, xyz_pos
             xyz_list[i, :] = np.array([x_pos_source, y_pos_source, z_pos])
     return xyz_list # x, y, z
 
-def generate_grid(config, mag='4x', mod='bf', box=None, overlap=50, xyz_pos_list=None, z_offset=0):
-    if box is not None:
-        s_x = box[0]
-        s_y = box[1]
-        e_x = box[2]
-        e_y = box[3]
-    else:
-        s_x = config["slide-start"][0]
-        s_y = config["slide-start"][1]
-        e_x = config["slide-start"][0] + config["slide-size"][0]
-        e_y = config["slide-start"][1] + config["slide-size"][1]
+def generate_grid(config, mag='4x', mod='bf', overlap=50, xyz_pos_list=None, z_offset=0):
+    s_x = config["slide-box"][0]
+    s_y = config["slide-box"][1]
+    e_x = config["slide-box"][0] + config["slide-box"][2]
+    e_y = config["slide-box"][1] + config["slide-box"][3]
     if mod == 'bf':
         if mag == '20x':
             pixel_size = config["pixel-size-bf-20x"]
@@ -212,7 +206,7 @@ def export_slide(mag='4x', remove_file=True):
         if remove_file:
             os.remove(img_dir)
         
-def annotations_positionlist(config, image_name, in_mag='4x', out_mag='4x', box=(0, 0, 0, 0)):
+def annotations_positionlist(config, image_name, in_mag='4x', out_mag='4x'):
     pos_lists = []
     if in_mag == '4x':
         pixel_size = config["pixel-size-bf-4x"]
@@ -230,8 +224,8 @@ def annotations_positionlist(config, image_name, in_mag='4x', out_mag='4x', box=
     for annotation in annotations:
         df = pd.read_csv(annotation)
         pos_list = np.array(df)
-        pos_list[:, 0] = (pos_list[:, 0]*pixel_size + box[0] + off_set[0])
-        pos_list[:, 1] = (pos_list[:, 1]*pixel_size + box[1] + off_set[1])
+        pos_list[:, 0] = pos_list[:, 0]*pixel_size + off_set[0] + config["slide-box"][0]
+        pos_list[:, 1] = pos_list[:, 1]*pixel_size + off_set[1] + config["slide-box"][1]
         pos_lists.append(pos_list)
         annotation_name = annotation.split(image_name)[-1].split('.')[0]
         annotation_names.append(annotation_name)
