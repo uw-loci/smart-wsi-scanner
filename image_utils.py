@@ -47,7 +47,7 @@ def bounding_image(config, image, box=None):
         plt.show()
         return low_box_bounded # bounding box in real stage position (x, y, x, y)
     
-def is_background(img, t=0.18):
+def is_background(img, t=0.16, tt=0.23):
 #     img = transform.resize(img, (1024, 1024))
     patch_h = int(img.shape[0]/8)
     patch_w = int(img.shape[1]/8)
@@ -60,7 +60,9 @@ def is_background(img, t=0.18):
     bright_img = 1-img_min[:, :, 2]
     ave_sat = np.sum(sat_img)/(patch_h*patch_w)
     ave_bright = np.sum(bright_img)/(patch_h*patch_w)
-    return ave_sat < t and ave_bright < t*2
+    print(ave_sat)
+    print(ave_bright)
+    return ave_sat < t and ave_bright < tt
 
 def estimate_background(config, save_path, acq_name, position_list=None, mda=True):
     sum_img = np.zeros((config["camera-resolution"][0], config["camera-resolution"][1], 3))
