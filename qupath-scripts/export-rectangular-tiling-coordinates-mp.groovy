@@ -53,7 +53,8 @@ annotations.eachWithIndex{a,i->
     }
     hierarchy.addPathObjects(newTiles)
     //Does not use CLASS of annotation in the name at the moment.
-    path = buildFilePath(baseDirectory, "mp-tiles",  imageName+"-"+i+".csv")
+    annotationName = a.getName()
+    path = buildFilePath(baseDirectory, "mp-tiles",  imageName+"-"+annotationName+".csv")
     //logger.info(path.toString())
     new File(path).withWriter { fw ->
         fw.writeLine(header)

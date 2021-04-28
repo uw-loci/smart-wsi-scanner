@@ -60,8 +60,8 @@ def is_background(img, t=0.16, tt=0.23):
     bright_img = 1-img_min[:, :, 2]
     ave_sat = np.sum(sat_img)/(patch_h*patch_w)
     ave_bright = np.sum(bright_img)/(patch_h*patch_w)
-    print(ave_sat)
-    print(ave_bright)
+#     print(ave_sat)
+#     print(ave_bright)
     return ave_sat < t and ave_bright < tt
 
 def estimate_background(config, save_path, acq_name, position_list=None, mda=True):
@@ -236,7 +236,7 @@ def stitching(config, ij, save_path, acq_name, mag='4x', mda=True, z_stack=False
 def lsm_process_fn(config):
     if config["snr-level"]=="low":
         def img_process_fn(image, metadata):
-            image = exposure.rescale_intensity(image, in_range=(6600, 9200), out_range=(0, 1))
+            image = exposure.rescale_intensity(image, in_range=(6700, 9200), out_range=(0, 1))
             image = exposure.adjust_gamma(image, 0.6)
             image = img_as_uint(image)
             if config["enhancement-type"] is not None:
@@ -245,7 +245,7 @@ def lsm_process_fn(config):
             return image, metadata
     if config["snr-level"]=="mid":
         def img_process_fn(image, metadata):
-            image = exposure.rescale_intensity(image, in_range=(6200, 11000), out_range=(0, 1))
+            image = exposure.rescale_intensity(image, in_range=(6300, 11000), out_range=(0, 1))
             image = exposure.adjust_gamma(image, 0.8)
             image = img_as_uint(image)
             if config["enhancement-type"] is not None:

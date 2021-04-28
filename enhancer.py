@@ -8,24 +8,24 @@ import numpy as np
 
 class Enhancer:
     
-    def __init__(self, config, dropout_rate=0.05, batch_size=512):
+    def __init__(self, config, dropout_rate=0.1, batch_size=64):
         ### store config
         self.config = config
         self.p = dropout_rate
         self.batch_size = batch_size
         ### construct model
         if config["enhancement-type"] == "Self":
-            model = models.Generator(1, 16, norm='instance')
+            model = models.Generator(1, 8, norm='instance')
             if config["lsm-resolution"] == 512:
                 model.load_state_dict(torch.load(os.path.join('model-weights', 'self-512.pth'), map_location=torch.device('cpu')))
             if config["lsm-resolution"] == 256:
                 model.load_state_dict(torch.load(os.path.join('model-weights', 'self-256.pth'), map_location=torch.device('cpu')))
         if config["enhancement-type"] == "Supervised":
-            model = models.Generator(1, 16, norm='instance')
+            model = models.Generator(1, 8, norm='instance')
             if config["lsm-resolution"] == 512:
-                model.load_state_dict(torch.load(os.path.join('model-weights', 'supervised-512.pth'), map_location=torch.device('cpu')))
+                model.load_state_dict(torch.load(os.path.join('model-weights', 'sisr-512.pth'), map_location=torch.device('cpu')))
             if config["lsm-resolution"] == 256:
-                model.load_state_dict(torch.load(os.path.join('model-weights', 'supervised-256.pth'), map_location=torch.device('cpu')))
+                model.load_state_dict(torch.load(os.path.join('model-weights', 'sisr-256.pth'), map_location=torch.device('cpu')))
         if config["gpu"] == True:
             self.model = model.cuda()
         else:
@@ -34,11 +34,10 @@ class Enhancer:
     def compute(self, image):
         with torch.no_grad():
             image = img_as_float(image)
-            if self.config["exposure-level"] == "mid":
-                image = exposure.rescale_intensity(image, in_range=(0.12, 1), out_range=(0, 1))
-            if self.config["exposure-level"] == "high":
-                image = exposure.rescale_intensity(image, in_range=(0.03, 1), out_range=(0, 1))
-            image = exposure.adjust_gamma(image, 0.5)
+            if self.config["lsm-resolution"] == 256:
+                image = exposure.rescale_intensity(image, in_range=(0.2, 0.8), out_range=(0, 1))
+            if self.config["lsm-resolution"] == 512:
+                image = exposure.rescale_intensity(image, in_range=(0.1, 0.9), out_range=(0, 1))
             image_tensor = torch.from_numpy(image).view(1, 1, self.config["lsm-resolution"], self.config["lsm-resolution"]) # 1x1xHxW
             device = next(self.model.parameters()).device
             image_tensor = image_tensor.float().to(device)

@@ -13,4 +13,7 @@ qupath-projects/
 *.log
 denoise/
 model-weights/
+data-predictor/
+acquisition-configs/
+
 

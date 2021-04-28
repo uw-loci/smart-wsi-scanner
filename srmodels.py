@@ -2,15 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.init as init
 import torch.nn.functional as F
-
-def weights_init_normal(m):
-    classname = m.__class__.__name__
-    if classname.find("Conv") != -1:
-        torch.nn.init.normal_(m.weight.data, 0.0, 0.02)
-    elif classname.find("BatchNorm2d") != -1:
-        torch.nn.init.normal_(m.weight.data, 1.0, 0.02)
-        torch.nn.init.constant_(m.bias.data, 0.0)
-        
         
 class ConvBlock(torch.nn.Module):   
     def __init__(self, input_size, output_size, kernel_size=3, stride=1, padding=1, bias=True, norm=None):
@@ -94,7 +85,7 @@ class Generator(nn.Module):
         self.up0 = UpBlock(base_channel*16, base_channel*8, norm=None)
         self.up1 = UpBlock(base_channel*16, base_channel*4, norm=None)
         self.up2 = UpBlock(base_channel*8, base_channel*2, norm=None)
-        self.up3 = PixBlock(base_channel*4, in_channel, norm=None)        
+        self.up3 = UpBlock(base_channel*4, in_channel, norm=None)        
         self.skip0 = ConvBlock(base_channel*2, base_channel*4)
         self.skip1 = ConvBlock(base_channel*4, base_channel*8)
         self.skip2 = ConvBlock(base_channel*8, base_channel*16)
