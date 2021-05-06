@@ -7,15 +7,18 @@
 SmartPath is an open-source multimodal whole slide histopathology imaging system with the capabilities of automaticmodality switching, region of interest detection, and run-time image processing, empowered by deep learning. The acquisition program is written in Jupyter Notebook and uses [Pycro-Manager](https://github.com/micro-manager/pycro-manager) for hardware control.  
 
 ## Installation
-Install [anaconda/miniconda](https://docs.conda.io/en/latest/miniconda.html)  
-Required packages  
+Install [anaconda/miniconda](https://docs.conda.io/en/latest/miniconda.html).  
+Open terminal or Anaconda Prompt in Windows.  
+Install required packages:  
 ```
   $ conda env create --name smartpath --file env.yml
   $ conda activate smartpath
   $ pip install pycromanager
-```
+```  
+Install [PyTorch](https://pytorch.org/get-started/locally/), pick GPU or CPU version.  
+
 ## Software requirement
-Micro-manager 2.0 gamma, OpenScan, and QuPath. See [document]("docs/manual.pdf") for details.  
+Micro-manager 2.0 gamma, OpenScan, QuPath and FIJI. See [document](https://github.com/uw-loci/smart-wsi-scanner/blob/master/docs/manual.pdf) for details.  
 
 ## How to use  
 See [document]("docs/manual.pdf") for details.  
