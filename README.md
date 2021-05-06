@@ -4,7 +4,7 @@
   <img src="docs/github.png" width="700px" />
 </div>
 
-SmartPath is an open-source multimodal whole slide histopathology imaging system with the capabilities of automaticmodality switching, region of interest detection, and run-time image processing, empowered by deep learning. The acquisition program is written in Jupyter Notebook and uses [Pycro-Manager](https://github.com/micro-manager/pycro-manager) for hardware control.  
+SmartPath is an open-source multimodal whole slide histopathology imaging system with the capabilities of automaticmodality switching, region of interest detection, and run-time image processing, empowered by deep learning. The acquisition program is written in [Jupyter Notebook/JupyterLab](https://jupyterlab.readthedocs.io/en/stable/) and uses [Pycro-Manager](https://pycro-manager.readthedocs.io/en/latest/) for hardware control.  
 
 ## Installation
 Install [anaconda/miniconda](https://docs.conda.io/en/latest/miniconda.html).  
