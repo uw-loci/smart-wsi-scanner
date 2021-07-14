@@ -97,11 +97,11 @@ def switch_mod(config, core, mod='shg'):
         core.wait_for_system()
         print('Imaging mode set as SHG')
     if mod == 'bf':
-        core.set_property("DCC100", "DCC100 status", "On")
-        core.set_property("DCC100", "ClearOverload", "Clear")
-        core.wait_for_system()
-        core.set_property("DCC100", "DCC100 status", "Off")
-        core.wait_for_system()
+        #core.set_property("DCC100", "DCC100 status", "On")
+        #core.set_property("DCC100", "ClearOverload", "Clear")
+        #core.wait_for_system()
+        #core.set_property("DCC100", "DCC100 status", "Off")
+        #core.wait_for_system()
         core.set_config('Imaging', 'Camera')
         if current_objective == 'Position-2':
             switch_objective(config, core, '4x')

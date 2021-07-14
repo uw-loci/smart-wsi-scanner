@@ -9,6 +9,8 @@ from PIL import Image
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from scipy import stats
+import statistics
 
 def bounding_image(config, image, box=None):
         img_g = color.rgb2gray(img)
@@ -72,6 +74,7 @@ def estimate_background(config, save_path, acq_name, position_list=None, mda=Tru
         dataset = Dataset(data_path)
     else:
         image_list = glob.glob(os.path.join(glob.glob(save_path+'/'+acq_name+'*')[-1], '*.tiff'))
+    bg_stack = []
     for pos_row in range(position_list.shape[0]):
         for pos_col in range(position_list.shape[1]):
             if mda:
@@ -79,8 +82,18 @@ def estimate_background(config, save_path, acq_name, position_list=None, mda=Tru
             else:
                 img = io.imread(image_list[pos_row*position_list.shape[1]+pos_col])
             if is_background(img):
+                bg_stack.append(img)
                 sum_img = np.array(img_as_float(img)) + sum_img
                 sum_count = sum_count + 1
+    bg_stack= np.stack(bg_stack)
+    #Alternate methods for averaging background image - Michael S Nelson 20210708
+    #mode,count = stats.mode(bg_stack, axis=0)
+    #mode = img_as_float(mode)
+    #return mode
+    #median,count = np.median(bg_stack, axis=0)
+    #median = image_as_float(median)
+    #return median
+
     return sum_img / sum_count
 
 def white_balance(img, bg, gain=1.0):
@@ -199,6 +212,7 @@ def stitching(config, ij, save_path, acq_name, mag='4x', mda=True, z_stack=False
                 open(filePath);
             }
             run("Merge Channels...", "c1=img_t1_z1_c1 c2=img_t1_z1_c2 c3=img_t1_z1_c3 create");
+            run("RGB Color");
             saveAs("Tiff", outDir);
             close("*");
             """

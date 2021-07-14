@@ -1,10 +1,11 @@
 createTiles = true
 
 double pixelSizeSource = 1.105
-double pixelSizeTarget = 0.255
-double frameWidth = 512 / pixelSizeSource * pixelSizeTarget
-double frameHeight = 512 / pixelSizeSource * pixelSizeTarget
-double overlap = 50 * pixelSizeSource * pixelSizeTarget
+double pixelSizeTarget = 0.222
+double frameWidth = 1392 / pixelSizeSource * pixelSizeTarget
+double frameHeight = 1040 / pixelSizeSource * pixelSizeTarget
+//Overlap percent - 10% is 10, not 0.1
+double overlapPercent = 10
 baseDirectory = PROJECT_BASE_DIR
 
 /***********************************************/
@@ -20,41 +21,55 @@ newTiles = []
 //Store XY coordinates in an array
 
 //Check all annotations. Use .findAll{expression} to select a subset
-annotations = hierarchy.getAnnotationObjects().findAll{it.getPathClass()!=getPathClass("Background")}
+annotations = hierarchy.getAnnotationObjects()
 imageName = GeneralTools.getNameWithoutExtension(getQuPath().getProject().getEntry(imageData).getImageName())
 logger.info(imageName.toString())
 //Ensure the folder to store the csv exists
-tilePath = buildFilePath(baseDirectory, "mp-tiles")
+tilePath = buildFilePath(baseDirectory, "20x-tiles")
 mkdirs(tilePath)
 //CSV will be only two columns with the following header
 String header="x_pos,y_pos";
 
 annotations.eachWithIndex{a,i->
-    xy = []
+    index = 0;
+    xy = [];
+    yline = 0
     roiA = a.getROI()
     //generate a bounding box to create tiles within
     bBoxX = a.getROI().getBoundsX()
     bBoxY = a.getROI().getBoundsY()
     bBoxH = a.getROI().getBoundsHeight()
     bBoxW = a.getROI().getBoundsWidth()
+    y = bBoxY
     x = bBoxX
-   
-    while (x< bBoxX+bBoxW){
-        y = bBoxY
-        while (y < bBoxY+bBoxH){
-            if(createTiles==true){
-                intersect=createATile(x, y, frameWidth, frameHeight, overlap, roiA)
-            }
-            if(intersect){xy << [x,y]}
-            y = y+frameHeight-overlap
+    while (y< bBoxY+bBoxH){
+        //In order to serpentine the resutls, there need to be two bounds for X now
+        while ((x <= bBoxX+bBoxW) && (x >=bBoxX-frameWidth)){
 
+            def roi = new RectangleROI(x,y,frameWidth,frameHeight, ImagePlane.getDefaultPlane())
+            if(roiA.getGeometry().intersects(roi.getGeometry())){
+                newAnno = PathObjects.createDetectionObject(roi)
+                newAnno.setName(index.toString())
+                newTiles << newAnno
+                xy << [x,y]
+                print index + " good "+x
+            }else {print x}
+            if (yline%2 ==0){
+                x = x+frameWidth-overlapPercent/100*frameWidth
+            } else { x = x-(frameWidth - overlapPercent/100*frameWidth)}
+            index++
         }
-        x = x+frameWidth-overlap
+        y = y+frameHeight-overlapPercent/100*frameHeight
+        if (yline%2 ==0){
+            x = x-(frameWidth - overlapPercent/100*frameWidth)
+         } else {x = x+frameWidth-overlapPercent/100*frameWidth}
+        
+        yline++
     }
     hierarchy.addPathObjects(newTiles)
     //Does not use CLASS of annotation in the name at the moment.
     annotationName = a.getName()
-    path = buildFilePath(baseDirectory, "mp-tiles",  imageName+"-"+annotationName+".csv")
+    path = buildFilePath(baseDirectory, "20x-tiles", imageName+"-"+annotationName+".csv")
     //logger.info(path.toString())
     new File(path).withWriter { fw ->
         fw.writeLine(header)
@@ -68,13 +83,6 @@ annotations.eachWithIndex{a,i->
     }
 }
 
-boolean createATile(x,y,width,height, overlap, roiA) {
-    def roi = new RectangleROI(x,y,width,height, ImagePlane.getDefaultPlane())
-    if(roiA.getGeometry().intersects(roi.getGeometry())){
-        newTiles << PathObjects.createDetectionObject(roi)
-        return true;
-    }else{ return false;}
-}
 
 import qupath.imagej.gui.IJExtension
 import qupath.imagej.tools.IJTools
