@@ -83,18 +83,18 @@ def estimate_background(config, save_path, acq_name, position_list=None, mda=Tru
                 img = io.imread(image_list[pos_row*position_list.shape[1]+pos_col])
             if is_background(img):
                 bg_stack.append(img)
-                sum_img = np.array(img_as_float(img)) + sum_img
+#                 sum_img = np.array(img_as_float(img)) + sum_img
                 sum_count = sum_count + 1
     bg_stack= np.stack(bg_stack)
     #Alternate methods for averaging background image - Michael S Nelson 20210708
     #mode,count = stats.mode(bg_stack, axis=0)
     #mode = img_as_float(mode)
     #return mode
-    #median,count = np.median(bg_stack, axis=0)
-    #median = image_as_float(median)
-    #return median
+    median = np.median(bg_stack, axis=0)
+    median = img_as_float(median)
+    return median
 
-    return sum_img / sum_count
+#     return sum_img / sum_count
 
 def white_balance(img, bg, gain=1.0):
     img = img_as_float(img)
