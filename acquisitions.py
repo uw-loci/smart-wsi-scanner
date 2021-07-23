@@ -178,8 +178,8 @@ def generate_grid(config, mag='4x', mod='bf', overlap=50, xyz_pos_list=None, z_o
         field_w = config["lsm-resolution"] * pixel_size
         field_h = config["lsm-resolution"] * pixel_size
     field_o = overlap * pixel_size
-    grid_w = int(np.ceil((e_x - s_x) / (field_w - field_o))) # number of fields in x direction
-    grid_h = int(np.ceil((e_y - s_y) / (field_h - field_o))) # number of fields in y direction
+    grid_w = int(np.floor((e_x - s_x) / (field_w - field_o))) # number of fields in x direction
+    grid_h = int(np.floor((e_y - s_y) / (field_h - field_o))) # number of fields in y direction
     xy_list = np.zeros((grid_h, grid_w, 2)) # h x w x 2, xy_list[i, j, :]
     for x in range(grid_w): # row
         for y in range(grid_h): # column intergers 0~grid_h but not grid_h

@@ -49,7 +49,7 @@ def bounding_image(config, image, box=None):
         plt.show()
         return low_box_bounded # bounding box in real stage position (x, y, x, y)
     
-def is_background(img, t=0.16, tt=0.23):
+def is_background(img, t=0.3, tt=0.32):
 #     img = transform.resize(img, (1024, 1024))
     patch_h = int(img.shape[0]/8)
     patch_w = int(img.shape[1]/8)
