@@ -8,6 +8,39 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+def limit_stage(config, args=None, default=None):
+    if len(args)==1:
+        if default[0] < config["hard-limit-z"][0] or default[0] > config["hard-limit-z"][1]:
+            raise SystemExit("Default z out of range")
+        if args[0] < config["hard-limit-z"][0] or args[0] > config["hard-limit-z"][1]:
+            print("Warning: z-stage out of range {}".format(args))
+            if len(default)==1:
+                return default[0]
+            else:
+                raise SystemExit("Stop acquisition")
+        else:
+            return args[0]
+    if len(args)==2:
+        if args[0] < config["hard-limit-x"][0] or args[0] > config["hard-limit-x"][1] or args[1] < config["hard-limit-y"][0] or args[1] > config["hard-limit-y"][1]:
+            print("Warning: xy-stage out of range x: {} y: {}".format(args[0], args[1]))
+            if len(default)==2:
+                return default
+            else:
+                raise SystemExit("Stop acquisition")
+                return None
+        else:
+            return args
+    if len(args)==3:
+        if args[0] < config["hard-limit-x"][0] or args[0] > config["hard-limit-x"][1] or args[1] < config["hard-limit-y"][0] or args[1] > config["hard-limit-y"][1] or args[2] < config["hard-limit-z"][0] or args[2] > config["hard-limit-z"][1]:
+            print("Warning: stage out of range x: {} y: {} z: {}".format(args[0], args[1], args[2]))
+            if len(default)==3:
+                return default
+            else:
+                raise SystemExit("Stop acquisition")
+                return None
+        else:
+            return args
+
 def snap_image(core, rgb, flip_channel=True):
     core.snap_image()
     tagged_image = core.get_tagged_image()
@@ -58,7 +91,8 @@ def switch_objective(config, core, mag='4x'): # brightfield
         core.set_focus_device(config["condensor-device"])
         core.set_position(config["F-stage-4x"])
         core.set_focus_device(config["focus-device"])
-        core.set_position(config["Z-stage-4x"])
+        focus_z = limit_stage(config, (config["Z-stage-4x"],), default=(-3570,))
+        core.set_position(focus_z)
         core.set_property(config["led-device"][0], config["led-device"][1], config["led-4x"])
         core.wait_for_system()
     if mag == '20x':
@@ -66,7 +100,8 @@ def switch_objective(config, core, mag='4x'): # brightfield
         core.set_focus_device(config["condensor-device"])
         core.set_position(config["F-stage-20x"])
         core.set_focus_device(config["focus-device"])
-        core.set_position(config["Z-stage-20x"])
+        focus_z = limit_stage(config, (config["Z-stage-20x"],), default=(-6980,))
+        core.set_position(focus_z)
         core.set_property(config["led-device"][0], config["led-device"][1], config["led-20x"])
         core.wait_for_system() 
         
@@ -81,7 +116,8 @@ def switch_mod(config, core, mod='shg'):
         core.set_focus_device(config["condensor-device"])
         core.set_position(config["F-stage-laser"]) # new value
         core.set_focus_device(config["focus-device"])
-        core.set_position(config["Z-stage-laser"]) #
+        focus_z = limit_stage(config, (config["Z-stage-laser"],), default=(-6640,))
+        core.set_position(focus_z) #
         core.set_property(config["led-device"][0], config["led-device"][1], 0.0)
         core.set_config('Imaging', 'LSM')
         core.set_property(config["led-device"][0], config["led-device"][1], 0.0)
@@ -128,16 +164,17 @@ def resample_z_pos(config, mag='20x', xy_pos=None, xyz_pos_list_4x=None, xyz_pos
             x_pos_source = xy_pos[i, 0]
             y_pos_source = xy_pos[i, 1]
             if mag=='20x': # transfer back to input grid position (4x)
-                z_offset = config["Z-stage-20x"] - config["Z-stage-4x"]
+                z_offset = config["Z-bf-offset"]
                 x_pos = x_pos_source - config["20x-bf-offset"][0]
                 y_pos = y_pos_source - config["20x-bf-offset"][1]
             if mag=='mp':
-                z_offset = config["Z-stage-laser"] - config["Z-stage-4x"]
+                z_offset = config["Z-laser-offset"] + config["Z-bf-offset"]
                 x_pos = x_pos_source - config["shg-offset"][0]
                 y_pos = y_pos_source - config["shg-offset"][1]
             x_idx = np.abs(dense_xyz[0, :, 0] - x_pos).argmin()
             y_idx = np.abs(dense_xyz[:, 0, 1] - y_pos).argmin()
             z_pos = dense_xyz[y_idx, x_idx, 2] + z_offset
+            z_pos = limit_stage(config, (z_pos,), default=(-6640,))
             xyz_list[i] = [x_pos_source, y_pos_source, z_pos]
     if xyz_pos_list_20x is not None:
         xyz_list = np.ones((xy_pos.shape[0], 3))
@@ -149,12 +186,13 @@ def resample_z_pos(config, mag='20x', xy_pos=None, xyz_pos_list_4x=None, xyz_pos
                 x_pos = x_pos_source
                 y_pos = y_pos_source
             if mag=='mp':
-                z_offset = config["Z-stage-laser"] - config["Z-stage-20x"]
+                z_offset = config["Z-laser-offset"]
                 x_pos = x_pos_source - config["shg-offset"][0] + config["20x-bf-offset"][0] 
                 y_pos = y_pos_source - config["shg-offset"][1] + config["20x-bf-offset"][1]
             distance = np.sqrt((x_pos-xyz_pos_list_20x[:, 0])**2 + (y_pos-xyz_pos_list_20x[:, 1])**2)
             idx = np.argmin(distance)
             z_pos = xyz_pos_list_20x[idx, 2] + z_offset
+            z_pos = limit_stage(config, (z_pos,), default=(-6640,))
             xyz_list[i, :] = np.array([x_pos_source, y_pos_source, z_pos])
     return xyz_list # x, y, z
 

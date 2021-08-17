@@ -119,7 +119,7 @@ def flat_field(img, bg, gain=1):
     img[:, :, 2] = 1 * exposure.rescale_intensity(np.clip(np.divide(img[:, :, 2], bg[:, :, 2] + 0.00) * b * gain, 0, 1), in_range=(0, 0.95), out_range=(0, 1))
     return img
     
-def stitching(config, ij, save_path, acq_name, mag='4x', mda=True, z_stack=False, position_list=None, flip_x=False, flip_y=False, rotate=None, correction=False, background_image=None, move_stitched_image=True):
+def stitching(config, ij, save_path, acq_name, mag='4x', mda=True, z_stack=False, channel=3, position_list=None, flip_x=False, flip_y=False, rotate=None, correction=False, background_image=None, move_stitched_image=True):
 #     position_list_flat = position_list.reshape(-1, 2)
     stitch_folder = os.path.join('data/stitching/tiles', acq_name)
     os.makedirs(stitch_folder, exist_ok=True)
@@ -144,14 +144,20 @@ def stitching(config, ij, save_path, acq_name, mag='4x', mda=True, z_stack=False
         bg_img = white_balance(copy.deepcopy(background_image), copy.deepcopy(background_image))
     with open(os.path.join(stitch_folder, 'TileConfiguration.txt'), 'w') as text_file:
         if z_stack:
-            print('dim = {}'.format(3), file=text_file)
+            if channel==3 or channel==1: # 3 slices in z-stack would be treated as RGB
+                print('dim = {}'.format(2), file=text_file)
+            else:
+                print('dim = {}'.format(3), file=text_file)
         else:
             print('dim = {}'.format(2), file=text_file)
         for pos in range(position_list.shape[0]):
             x = int(position_list[pos, 0] / pixel_size)
             y = int(position_list[pos, 1] / pixel_size)
             if z_stack:
-                print('{}.tiff; ; ({}, {}, {})'.format(pos, x, y, 0), file=text_file)
+                if channel==3 or channel==1:
+                    print('{}.tiff; ; ({}, {})'.format(pos, x, y), file=text_file)
+                else:
+                    print('{}.tiff; ; ({}, {}, {})'.format(pos, x, y, 0), file=text_file)
                 z_idx = 0
                 img_z_list = []
                 while(dataset.has_image(position=pos, z=z_idx)):
@@ -244,20 +250,29 @@ def stitching(config, ij, save_path, acq_name, mag='4x', mda=True, z_stack=False
             }
 
     result = ij.py.run_macro(macro, args)
-    shutil.rmtree(temp_channel_folder)
+#     shutil.rmtree(temp_channel_folder)
 #     shutil.rmtree(stitch_folder)
 
 def lsm_process_fn(config):
     if config["snr-level"]=="low":
         def img_process_fn(image, metadata):
-            image = exposure.rescale_intensity(image, in_range=(6700, 9200), out_range=(0, 1))
-            image = exposure.adjust_gamma(image, 0.6)
+            image = exposure.rescale_intensity(image, in_range=(6000, 8500), out_range=(0, 1))
+            image = exposure.adjust_gamma(image, 0.5)
             image = img_as_uint(image)
             if config["enhancement-type"] is not None:
                 image = config["enhancer"].compute(image)
                 image = img_as_uint(image)
             return image, metadata
     if config["snr-level"]=="mid":
+        def img_process_fn(image, metadata):
+            image = exposure.rescale_intensity(image, in_range=(6300, 9200), out_range=(0, 1))
+            image = exposure.adjust_gamma(image, 0.6)
+            image = img_as_uint(image)
+            if config["enhancement-type"] is not None:
+                image = config["enhancer"].compute(image)
+                image = img_as_uint(image)
+            return image, metadata
+    if config["snr-level"]=="high":
         def img_process_fn(image, metadata):
             image = exposure.rescale_intensity(image, in_range=(6300, 11000), out_range=(0, 1))
             image = exposure.adjust_gamma(image, 0.8)
@@ -266,7 +281,7 @@ def lsm_process_fn(config):
                 image = config["enhancer"].compute(image)
                 image = img_as_uint(image)
             return image, metadata
-    if config["snr-level"]=="high":
+    if config["snr-level"]=="extreme":
         def img_process_fn(image, metadata):
             image = exposure.rescale_intensity(image, in_range=(6000, 14000), out_range=(0, 1))
             image = exposure.adjust_gamma(image, 0.9)
