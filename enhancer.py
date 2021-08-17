@@ -24,6 +24,7 @@ class Enhancer:
                 model.load_state_dict(torch.load(os.path.join('model-weights', 'sisr-512.pth'), map_location=torch.device('cpu')))
             if config["lsm-resolution"] == 256:
                 model.load_state_dict(torch.load(os.path.join('model-weights', 'sisr-256.pth'), map_location=torch.device('cpu')))
+        model.eval()
         if config["gpu"] == True:
             self.model = model.cuda()
         else:
@@ -32,7 +33,7 @@ class Enhancer:
     def compute(self, image):
         with torch.no_grad():
             image = img_as_float(image)
-             image = exposure.rescale_intensity(image, in_range=(self.config['norm-range'][0]/65535, self.config['norm-range'][1]/65535), out_range=(0, 1))
+            image = exposure.rescale_intensity(image, in_range=(self.config['norm-range'][0]/65535, self.config['norm-range'][1]/65535), out_range=(0, 1))
             image_tensor = torch.from_numpy(image).view(1, 1, self.config["lsm-resolution"], self.config["lsm-resolution"]) # 1x1xHxW
             device = next(self.model.parameters()).device
             image_tensor = image_tensor.float().to(device)

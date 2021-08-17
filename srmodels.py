@@ -87,14 +87,14 @@ class PixBlock(nn.Module):
 class Generator(nn.Module):
     def __init__(self, in_channel=3, base_channel=32, norm=None):
         super(Generator, self).__init__()
-        self.down0 = DownBlock(in_channel, base_channel*2, norm=None)
-        self.down1 = DownBlock(base_channel*2, base_channel*4, norm=None)
-        self.down2 = DownBlock(base_channel*4, base_channel*8, norm=None)
-        self.down3 = DownBlock(base_channel*8, base_channel*16, norm=None)       
-        self.up0 = UpBlock(base_channel*16, base_channel*8, norm=None)
-        self.up1 = UpBlock(base_channel*16, base_channel*4, norm=None)
-        self.up2 = UpBlock(base_channel*8, base_channel*2, norm=None)
-        self.up3 = UpBlock(base_channel*4, in_channel, norm=None)        
+        self.down0 = DownBlock(in_channel, base_channel*2, norm=norm)
+        self.down1 = DownBlock(base_channel*2, base_channel*4, norm=norm)
+        self.down2 = DownBlock(base_channel*4, base_channel*8, norm=norm)
+        self.down3 = DownBlock(base_channel*8, base_channel*16, norm=norm)       
+        self.up0 = UpBlock(base_channel*16, base_channel*8, norm=norm)
+        self.up1 = UpBlock(base_channel*16, base_channel*4, norm=norm)
+        self.up2 = UpBlock(base_channel*8, base_channel*2, norm=norm)
+        self.up3 = UpBlock(base_channel*4, in_channel, norm=norm)        
         self.skip0 = ConvBlock(base_channel*2, base_channel*4)
         self.skip1 = ConvBlock(base_channel*4, base_channel*8)
         self.skip2 = ConvBlock(base_channel*8, base_channel*16)
@@ -118,7 +118,7 @@ class Discriminator(nn.Module):
     def __init__(self, in_channel=3, norm=None):
         super(Discriminator, self).__init__()
 
-        def discriminator_block(in_filters, out_filters, norm=None):
+        def discriminator_block(in_filters, out_filters, norm=norm):
             """Returns downsampling layers of each discriminator block"""
             layers = [nn.Conv2d(in_filters, out_filters, 4, stride=2, padding=1)]
             if norm == 'instance':
