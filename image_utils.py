@@ -1,6 +1,6 @@
 import os, glob, shutil, sys, copy, time, json, copy
 from pycromanager import Dataset
-from skimage import io, img_as_ubyte, img_as_float, img_as_uint, color, transform, exposure
+from skimage import io, img_as_ubyte, img_as_float, img_as_uint, color, transform, exposure, img_as_uint
 from skimage.filters import threshold_mean
 from skimage.measure import shannon_entropy
 from skimage.util import view_as_windows, crop
@@ -195,7 +195,7 @@ def stitching(config, ij, save_path, acq_name, mag='4x', mda=True, z_stack=False
             if flip_x:
                 img = img[:, ::-1]
             sys.stdout.write('\r Processing tiles: {}/{}'.format(pos+1, position_list.shape[0]))
-            io.imsave(stitch_folder+'/{}.tiff'.format(pos), img_as_ubyte(img))
+            io.imsave(stitch_folder+'/{}.tiff'.format(pos), img_as_uint(img))
     sys.stdout.write('\n stitching, please wait...')
     temp_channel_folder = 'data/stitching/channel_temp'
     os.makedirs(temp_channel_folder, exist_ok=True)
