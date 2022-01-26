@@ -1,3 +1,6 @@
+//Exports CSV files into the project folder for both 20x brightfield and SHG imaging tiles
+//CURRENTLY NAME-MODIFIED FOR PDAC PROJECT - CHANGE OUTPUT FILE NAMES IN both PLACES FOR ANY OTHER PROJECT
+// updated 20220126 to remove 1st line apparent 1 tile indent when tiling
 createTiles = true
 
 double pixelSizeSource = 1.105
@@ -48,7 +51,7 @@ annotations.eachWithIndex{a,i->
     x = bBoxX
     while (y< bBoxY+bBoxH){
         //In order to serpentine the resutls, there need to be two bounds for X now
-        while ((x <= bBoxX+bBoxW) && (x >=bBoxX-frameWidth)){
+        while ((x <= bBoxX+bBoxW) && (x >=bBoxX-bBoxW*overlapPercent/100)){
 
             def roi = new RectangleROI(x,y,frameWidth,frameHeight, ImagePlane.getDefaultPlane())
             if(roiA.getGeometry().intersects(roi.getGeometry())){
@@ -131,7 +134,7 @@ annotations.eachWithIndex{a,i->
     x = bBoxX
     while (y< bBoxY+bBoxH){
         //In order to serpentine the resutls, there need to be two bounds for X now
-        while ((x <= bBoxX+bBoxW) && (x >=bBoxX-frameWidth)){
+        while ((x <= bBoxX+bBoxW) && (x >= bBoxX-bBoxW*overlapPercent/100)){
 
             def roi = new RectangleROI(x,y,frameWidth,frameHeight, ImagePlane.getDefaultPlane())
             if(roiA.getGeometry().intersects(roi.getGeometry())){
@@ -158,7 +161,7 @@ annotations.eachWithIndex{a,i->
     hierarchy.addPathObjects(newTiles)
     //Does not use CLASS of annotation in the name at the moment.
     annotationName = a.getName()
-    path = buildFilePath(baseDirectory, "mp-tiles", imageName+"-"+annotationName+".csv")
+    path = buildFilePath(baseDirectory, "mp-tiles",imageName+"-"+annotationName+".csv")
     //logger.info(path.toString())
     new File(path).withWriter { fw ->
         fw.writeLine(header)
