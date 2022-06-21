@@ -15,6 +15,7 @@ from skimage.util import view_as_windows, crop
 import scipy
 import pandas as pd
 from .image_utils import lsm_process_fn
+from tqdm import tqdm
 
 class SPAcquisition:
     def __init__(self, 
@@ -497,8 +498,7 @@ class SPAcquisition:
             tile_count = 0
             z_positions=np.ones(position_list.shape[0]) * core.get_position()
             core.set_focus_device(config['focus-device'])
-            autofocus_count = 0
-            for pos in range(position_list.shape[0]):
+            for pos in tqdm(range(position_list.shape[0])):
                 z_pos = position_list[pos, 2]
                 x_pos = position_list[pos, 0]
                 y_pos = position_list[pos, 1]
@@ -597,8 +597,7 @@ class SPAcquisition:
             tile_count = 0
             core.set_focus_device(config['focus-device'])
             z_positions=np.ones(position_list.shape[0]) * core.get_position()
-            autofocus_count = 0
-            for pos in range(position_list.shape[0]):
+            for pos in tqdm(range(position_list.shape[0])):
                 x_pos = position_list[pos, 0]
                 y_pos = position_list[pos, 1]
                 
@@ -693,13 +692,20 @@ class SPAcquisition:
             z_positions = z_positions.reshape(position_list.shape[0], 1)
             returns['Z positions'] = z_positions
         return returns
+
+    def define_lsm_processor(self, func):
+        def img_process_fn(image, metadata):
+            image = func(image)
+            image = img_as_uint(image)
+            return image, metadata
+        self.lsm_process_fn = img_process_fn
     
     
     def whole_slide_lsm_scan(self, save_path=None, acq_name=None, position_list=None, z_stack=False, z_center=None, sample_depth=20, z_step=4):
         config = self.config
         if position_list.shape[1] == 3:
             if z_stack:
-                with Acquisition(save_path, acq_name, lsm_process_fn(config)) as acq:
+                with Acquisition(save_path, acq_name, self.lsm_process_fn) as acq:
                     events = multi_d_acquisition_events(xyz_positions=position_list.reshape(-1, 3), 
                                                         z_start=-int(sample_depth/2), z_end=int(sample_depth/2), z_step=z_step)
                     acq.acquire(events)      

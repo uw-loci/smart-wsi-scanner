@@ -63,7 +63,7 @@ class SPStitcher:
                     img = img[:, ::-1]
                 sys.stdout.write('\r Processing tiles: {}/{}'.format(pos+1, position_list.shape[0]))
                 io.imsave(stitch_folder+'/{}.tiff'.format(pos), img_as_uint(img))
-        print('\n Calling ImageJ for titching, please wait...')
+        print('\n Calling ImageJ for stitching, please wait...')
         temp_channel_folder = 'data/stitching/channel_temp'
         os.makedirs(temp_channel_folder, exist_ok=True)
         params = {'type': 'Positions from file', 'order': 'Defined by TileConfiguration', 
@@ -144,7 +144,7 @@ class SPStitcher:
                         img = img[:, ::-1]
                     sys.stdout.write('\r Processing tiles: {}/{}'.format(pos+1, position_list.shape[0]))
                     io.imsave(stitch_folder+'/{}.tiff'.format(pos), img_as_uint(img))
-        print('Calling ImageJ for stitching, please wait...')
+        print('\n Calling ImageJ for stitching, please wait...')
         temp_channel_folder = 'data/stitching/channel_temp'
         os.makedirs(temp_channel_folder, exist_ok=True)
         params = {'type': 'Positions from file', 'order': 'Defined by TileConfiguration', 
