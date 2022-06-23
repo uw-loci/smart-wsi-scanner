@@ -62,7 +62,7 @@ class SPStitcher:
                 if flip_x:
                     img = img[:, ::-1]
                 sys.stdout.write('\r Processing tiles: {}/{}'.format(pos+1, position_list.shape[0]))
-                io.imsave(stitch_folder+'/{}.tiff'.format(pos), img_as_uint(img))
+                io.imsave(stitch_folder+'/{}.tiff'.format(pos), img_as_uint(img), check_contrast=False)
         print('\n Calling ImageJ for stitching, please wait...')
         temp_channel_folder = 'data/stitching/channel_temp'
         os.makedirs(temp_channel_folder, exist_ok=True)
@@ -74,26 +74,14 @@ class SPStitcher:
                 'image_output': 'Write to disk', 'output_directory': temp_channel_folder}
         plugin = "Grid/Collection stitching"
         ij.py.run_plugin(plugin, params)
-        macro = """
-            #@ String inDir
-            #@ String outDir
-            slices = getFileList(inDir);
-            for (i=0;i<lengthOf(slices);i=i+1) {
-                filePath = inDir + '/' + slices[i];
-                open(filePath);
-            }
-            run("Merge Channels...", "c1=img_t1_z1_c1 c2=img_t1_z1_c2 c3=img_t1_z1_c3 create");
-            run("RGB Color");
-            saveAs("Tiff", outDir);
-            close("*");
-            """
+        global macroRGB
         args = {
-                'inDir' : os.path.join(os.getcwd(), temp_channel_folder),
-                'outDir' : os.path.join(os.getcwd(), os.path.join(slide_folder, acq_name+'.tif'))
+                'indir' : os.path.join(os.getcwd(), temp_channel_folder),
+                'outdir' : os.path.join(os.getcwd(), os.path.join(slide_folder, acq_name+'.tif'))
         }
-        result = ij.py.run_macro(macro, args)
+        result = ij.py.run_macro(macroRGB, args)
         
-    def stitch_lsm(self, save_path, acq_name, n_stack=3, position_list=None, flip_x=False, flip_y=False, rotate=None, correction=False, background_image=None):
+    def stitch_lsm(self, save_path, acq_name, n_stack=3, position_list=None, flip_x=False, flip_y=False, rotate=None):
         ij = self.ij
         config = self.config
         stitch_folder = os.path.join('data/stitching/tiles', acq_name)
@@ -103,7 +91,10 @@ class SPStitcher:
         os.makedirs(out_folder, exist_ok=True)
         os.makedirs(slide_folder, exist_ok=True)
         pixel_size = config["pixel-size-shg"]
-        data_path = glob.glob(save_path+'/'+acq_name+'*')[-1]
+        data_paths = glob.glob(save_path+'/'+acq_name+'*')
+        data_paths.sort()
+        data_path = data_paths[-1]
+        print('Stitching: ' + data_path)
         dataset = Dataset(data_path)
         with open(os.path.join(stitch_folder, 'TileConfiguration.txt'), 'w') as text_file:
             if n_stack==3 or n_stack==1: # 3 slices in z-stack would be treated as RGB
@@ -122,17 +113,7 @@ class SPStitcher:
                 img_z_list = []
                 while(dataset.has_image(position=pos, z=z_idx)):
                     img = dataset.read_image(position=pos, z=z_idx)
-                    if correction == 'high' and background_image is None:
-                        img = exposure.rescale_intensity(img, in_range=(6000, 14000), out_range=(0, 1))
-                        img = exposure.adjust_gamma(img, 0.9)
-                    if correction == 'mid' and background_image is None:
-                        img = exposure.rescale_intensity(img, in_range=(6150, 11000), out_range=(0, 1))
-                        img = exposure.adjust_gamma(img, 0.8)
-                    if correction == 'low' and background_image is None:
-                        img = exposure.rescale_intensity(img, in_range=(6450, 9200), out_range=(0, 1))
-                        img = exposure.adjust_gamma(img, 0.6)
-                    if correction is None:
-                        img = img_as_float(img)
+                    # img = img_as_float(img)
                     if rotate is not None:
                         img = transform.rotate(np.array(img), rotate)
                     img_z_list.append(img)
@@ -143,7 +124,7 @@ class SPStitcher:
                     if flip_x:
                         img = img[:, ::-1]
                     sys.stdout.write('\r Processing tiles: {}/{}'.format(pos+1, position_list.shape[0]))
-                    io.imsave(stitch_folder+'/{}.tiff'.format(pos), img_as_uint(img))
+                    io.imsave(stitch_folder+'/{}.tiff'.format(pos), img_as_uint(img), check_contrast=False)
         print('\n Calling ImageJ for stitching, please wait...')
         temp_channel_folder = 'data/stitching/channel_temp'
         os.makedirs(temp_channel_folder, exist_ok=True)
@@ -155,25 +136,12 @@ class SPStitcher:
                 'image_output': 'Write to disk', 'output_directory': temp_channel_folder}
         plugin = "Grid/Collection stitching"
         ij.py.run_plugin(plugin, params)
-        macro = """
-            #@ String inDir
-            #@ String outDir
-            slices = getFileList(inDir);
-            for (i=0;i<lengthOf(slices);i=i+1) {
-                filePath = inDir + '/' + slices[i];
-                open(filePath);
-            }
-            run("Images to Stack", "name=Stack title=[] use");;
-            saveAs("Tiff", outDir);
-            run("Z Project...", "projection=[Max Intensity]");
-            saveAs("Tiff", outDir);
-            close("*");
-            """
+        global marcroLSM
         args = {
-                'inDir' : os.path.join(os.getcwd(), temp_channel_folder),
-                'outDir' : os.path.join(os.getcwd(), os.path.join(slide_folder, acq_name+'.tif'))
+                'indir' : os.path.join(os.getcwd(), temp_channel_folder),
+                'outdir' : os.path.join(os.getcwd(), os.path.join(slide_folder, acq_name+'.tif'))
         }
-        result = ij.py.run_macro(macro, args)
+        result = ij.py.run_macro(marcroLSM, args)
         
     def convert_slide(self, mag, remove_file=True):
         print('Converting slide to ome.tif')
@@ -196,3 +164,31 @@ class SPStitcher:
         temp_channel_folder = 'data/stitching/channel_temp'
         shutil.rmtree(temp_channel_folder)
         shutil.rmtree(stitch_folder)
+
+marcroLSM="""
+#@ String indir
+#@ String outdir
+slices = getFileList(indir);
+for (i=0;i<lengthOf(slices);i=i+1) {
+    filePath = indir + '/' + slices[i];
+    open(filePath);
+}
+run("Images to Stack", "name=Stack title=[] use");
+run("Z Project...", "projection=[Max Intensity]");
+saveAs("Tiff", outdir);
+close("*");
+"""
+
+macroRGB = """
+#@ String indir
+#@ String outdir
+slices = getFileList(indir);
+for (i=0;i<lengthOf(slices);i=i+1) {
+    filePath = indir + '/' + slices[i];
+    open(filePath);
+}
+run("Merge Channels...", "c1=img_t1_z1_c1 c2=img_t1_z1_c2 c3=img_t1_z1_c3 create");
+run("RGB Color");
+saveAs("Tiff", outdir);
+close("*");
+"""

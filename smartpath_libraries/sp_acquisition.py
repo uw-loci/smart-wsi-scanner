@@ -50,22 +50,22 @@ class SPAcquisition:
         
             
     def config_preset(self, config):
-        if config['exposure-level']=="low":
-            config['lsm-scan-rate'] = '500000.0000'
-            config['lsm-pc-power'] = 0.30
-            config['lsm-pmt-gain'] = 0.40
-        if config['exposure-level']=="mid":
-            config['lsm-scan-rate'] = '400000.0000'
-            config['lsm-pc-power'] = 0.45
-            config['lsm-pmt-gain'] = 0.45
-        if config['exposure-level']=="high":
-            config['lsm-scan-rate'] = '250000.0000'
-            config['lsm-pc-power'] = 0.60
-            config['lsm-pmt-gain'] = 0.50
-        if config['exposure-level']=="extreme":
-            config['lsm-scan-rate'] = '200000.0000'
-            config['lsm-pc-power'] = 0.75
-            config['lsm-pmt-gain'] = 0.55
+        # if config['exposure-level']=="low":
+        #     config['lsm-scan-rate'] = '500000.0000'
+        #     config['lsm-pc-power'] = 0.30
+        #     config['lsm-pmt-gain'] = 0.40
+        # if config['exposure-level']=="mid":
+        #     config['lsm-scan-rate'] = '400000.0000'
+        #     config['lsm-pc-power'] = 0.45
+        #     config['lsm-pmt-gain'] = 0.45
+        # if config['exposure-level']=="high":
+        #     config['lsm-scan-rate'] = '250000.0000'
+        #     config['lsm-pc-power'] = 0.60
+        #     config['lsm-pmt-gain'] = 0.50
+        # if config['exposure-level']=="extreme":
+        #     config['lsm-scan-rate'] = '200000.0000'
+        #     config['lsm-pc-power'] = 0.75
+        #     config['lsm-pmt-gain'] = 0.55
         config['pixel-size-shg'] = config['pixel-size-shg-base'] * 256 / config["lsm-resolution"]
         return config
     
@@ -143,12 +143,14 @@ class SPAcquisition:
             core.set_focus_device(config['focus-device'])
             focus_z = limit_stage(config['Z-stage-laser'], (config['hard-limit-z'][0], config['hard-limit-z'][1]), default=config['Z-stage-laser'])
             core.set_position(focus_z) #
+            # core.set_config('Imaging', 'LSM')
             core.set_property(config['led-device'][0], config['led-device'][1], 0.0)
-            core.set_config('Imaging', 'LSM')
-            core.set_property(config['led-device'][0], config['led-device'][1], 0.0)
-            core.set_property('OSc-LSM', 'Resolution', config['lsm-resolution'])
-            core.set_property('OSc-LSM', 'Bin Factor', config['lsm-bin-factor'])
-            core.set_property('OSc-LSM', 'PixelRateHz', config['lsm-scan-rate'])
+            core.set_property('Shutters-DigitalIODev1', 'State', 3)
+            core.set_property('Core', 'Camera', 'OSc-LSM')
+            core.set_property('Core', 'Shutter', 'UniblitzShutter')
+            core.set_property('QCamera', 'Color', 'OFF')
+            core.set_property('OSc-LSM', 'LSM-Resolution', config['lsm-resolution'])
+            core.set_property('OSc-LSM', 'LSM-PixelRateHz', config['lsm-scan-rate'])
             core.set_property('PockelsCell-Dev1ao1', 'Voltage', config['lsm-pc-power'])
             core.set_property('DCC100', 'DCC100 status', 'On')
             core.set_property('DCC100', 'ClearOverload', 'Clear')
@@ -163,7 +165,11 @@ class SPAcquisition:
             core.wait_for_system()
             core.set_property('DCC100', 'DCC100 status', 'Off')
             core.wait_for_system()
-            core.set_config('Imaging', 'Camera')
+            # core.set_config('Imaging', 'Camera')
+            core.set_property('Shutters-DigitalIODev1', 'State', 0)
+            core.set_property('Core', 'Camera', 'QCamera')
+            core.set_property('Core', 'Shutter', 'WhiteLED')
+            core.set_property('QCamera', 'Color', 'ON')
             if current_objective == 'Position-2':
                 self.switch_objective('4x')
             if current_objective == 'Position-1': 
@@ -589,7 +595,7 @@ class SPAcquisition:
                 display.display(plt.gcf())
                 display.clear_output(wait=True)
                 ### Use tifffile to write out a tile with metadata?
-                io.imsave(acq_path+'/{}-{}-{}.tiff'.format(pos, bg_flag, sp_flag), img_as_ubyte(pixels))
+                io.imsave(acq_path+'/{}-{}-{}.tiff'.format(pos, bg_flag, sp_flag), img_as_ubyte(pixels), check_contrast=False)
                 tile_count = tile_count + 1
                 sys.stdout.write('\r {}/{} tiles done'.format(tile_count, position_list.shape[0]))
             
@@ -669,7 +675,7 @@ class SPAcquisition:
                 display.display(plt.gcf())
                 display.clear_output(wait=True)
                 ### Use tifffile to create tile with metadata?
-                io.imsave(acq_path+'/{}-{}-{}.tiff'.format(pos, bg_flag, sp_flag), img_as_ubyte(pixels))
+                io.imsave(acq_path+'/{}-{}-{}.tiff'.format(pos, bg_flag, sp_flag), img_as_ubyte(pixels), check_contrast=False)
                 tile_count = tile_count + 1
                 sys.stdout.write('\r {}/{} tiles done'.format(tile_count, position_list.shape[0]))
         if estimate_background:
