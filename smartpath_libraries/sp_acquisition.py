@@ -47,6 +47,8 @@ class SPAcquisition:
         self.z_list_4x = None
         self.z_list_20x = None
         self.z_list_mp = None
+        self.bf_process_fn = None
+        self.lsm_process_fn = None
         
             
     def config_preset(self, config):
@@ -189,6 +191,8 @@ class SPAcquisition:
             pixels = pixels[:, :, 0:3]
             if flip_channel:
                 pixels = np.flip(pixels, 2)
+            if self.bf_process_fn is not None:
+                pixels = self.bf_process_fn(pixels)
         else:
             pixels = np.reshape(
                 tagged_image.pix,
@@ -222,6 +226,7 @@ class SPAcquisition:
                     display.display(plt.gcf())
                     display.clear_output(wait=True)
             except KeyboardInterrupt:
+                plt.close('all')
                 pass
         return pixels
     
@@ -486,8 +491,10 @@ class SPAcquisition:
         else:
             if mag=='4x':
                 background_image = self.bf_4x_bg
+                if self.bf_process_fn is not None: background_image = self.bf_process_fn(background_image)
             elif mag=='20x':
                 background_image = self.bf_20x_bg
+                if self.bf_process_fn is not None: background_image = self.bf_process_fn(background_image)
             if background_image is None:
                 raise ValueError('Background image not set nor to be estimated.')
             bg_img = white_balance(copy.deepcopy(background_image), copy.deepcopy(background_image))
@@ -495,7 +502,7 @@ class SPAcquisition:
         if mag == '4x':
             pos_z = config['Z-stage-4x']
         elif mag == '20x':
-            pos_z = config['Z-stage-20x']
+            pos_z = config["Z-stage-20x"]
             
         support_points = [(99999999, 99999999)] # dummy support point
         support_focus = [pos_z]
@@ -508,7 +515,7 @@ class SPAcquisition:
                 z_pos = position_list[pos, 2]
                 x_pos = position_list[pos, 0]
                 y_pos = position_list[pos, 1]
-                z_pos = config["Z-stage-20x"]
+                z_pos = pos_z
                 z_pos = limit_stage(z_pos, (config['hard-limit-z'][0], config['hard-limit-z'][1]), default=None)
                 x_pos = limit_stage(x_pos, (config['hard-limit-x'][0], config['hard-limit-x'][1]), default=None)
                 y_pos = limit_stage(y_pos, (config['hard-limit-y'][0], config['hard-limit-y'][1]), default=None)
@@ -531,7 +538,7 @@ class SPAcquisition:
                         pixels = self.snap_image(rgb=True, flip_channel=True)
                         bg_flag = is_background(pixels, t=bg_t, tt=bg_tt)
                     else:
-                        pos_z, pixels, bg_flag = self.autofocus(mag='4x', rgb=True, search_range=100, steps=3, snap=True, preset=z_pos) # snap at top but return center z
+                        pos_z, pixels, bg_flag = self.autofocus(mag='4x', rgb=True, search_range=160, steps=5, snap=True, preset=z_pos) # snap at top but return center z
                         if bg_flag:
                             if len(support_points)>=2:
                                 pos_z = limit_stage(pos_z, (config['hard-limit-z'][0], config['hard-limit-z'][1]), default=config["Z-stage-4x"])
@@ -557,7 +564,7 @@ class SPAcquisition:
                         pixels = self.snap_image(rgb=True, flip_channel=True)
                         bg_flag = is_background(pixels, t=bg_t, tt=bg_tt)
                     else:
-                        pos_z, pixels, bg_flag = self.autofocus(mag='20x', rgb=True, search_range=100, steps=3, snap=True, preset=z_pos) # snap at top but return center z
+                        pos_z, pixels, bg_flag = self.autofocus(mag='20x', rgb=True, search_range=120, steps=4, snap=True, preset=z_pos) # snap at top but return center z
                         if bg_flag:
                             if len(support_points)>=2:
                                 pos_z = limit_stage(pos_z, (config['hard-limit-z'][0], config['hard-limit-z'][1]), default=config["Z-stage-20x"])
@@ -567,7 +574,7 @@ class SPAcquisition:
                             core.wait_for_device(z_device)
                             pixels = self.snap_image(rgb=True, flip_channel=True)
                         else:
-                            pos_z, pixels, _ = self.autofocus(mag='20x', rgb=True, search_range=30, steps=5, snap=True, check_background=False, preset=z_pos) 
+                            pos_z, pixels, _ = self.autofocus(mag='20x', rgb=True, search_range=42, steps=7, snap=True, check_background=False, preset=z_pos) 
                             support_points.append((x_pos, y_pos))
                             support_focus.append(pos_z)
                             sp_flag = True
@@ -598,6 +605,7 @@ class SPAcquisition:
                 io.imsave(acq_path+'/{}-{}-{}.tiff'.format(pos, bg_flag, sp_flag), img_as_ubyte(pixels), check_contrast=False)
                 tile_count = tile_count + 1
                 sys.stdout.write('\r {}/{} tiles done'.format(tile_count, position_list.shape[0]))
+                plt.close('all')
             
         if position_list.shape[1] == 2:
             tile_count = 0
@@ -678,12 +686,15 @@ class SPAcquisition:
                 io.imsave(acq_path+'/{}-{}-{}.tiff'.format(pos, bg_flag, sp_flag), img_as_ubyte(pixels), check_contrast=False)
                 tile_count = tile_count + 1
                 sys.stdout.write('\r {}/{} tiles done'.format(tile_count, position_list.shape[0]))
+                plt.close('all')
         if estimate_background:
             if len(bg_stack)==0:
                 if mag=='4x':
                     background_image = self.bf_4x_bg
+                    if self.bf_process_fn is not None: background_image = self.bf_process_fn(background_image)
                 elif mag=='20x':
                     background_image = self.bf_20x_bg
+                    if self.bf_process_fn is not None: background_image = self.bf_process_fn(background_image)
                 returns['Background image'] = background_image
                 # io.imsave(acq_path+'/bg_img.tiff', img_as_ubyte(background_image))
             else:
@@ -705,7 +716,18 @@ class SPAcquisition:
             image = img_as_uint(image)
             return image, metadata
         self.lsm_process_fn = img_process_fn
-    
+
+    # def lsm_reset_PMT(self):
+    #     config = self.config
+    #     def lsm_hook_fn(event, bridge, event_queue):
+    #         core = bridge.get_core()
+    #         core.set_property('DCC100', 'DCC100 status', 'On')
+    #         core.set_property('DCC100', 'ClearOverload', 'Clear')
+    #         core.wait_for_system()
+    #         core.set_property('DCC100', 'DCC100 status', 'On')
+    #         core.set_property('DCC100', 'Connector1GainHV_Percent', config['lsm-pmt-gain']*100)
+    #         return event
+    #     self.lsm_hook_fn=lsm_hook_fn
     
     def whole_slide_lsm_scan(self, save_path=None, acq_name=None, position_list=None, z_stack=False, z_center=None, sample_depth=20, z_step=4):
         config = self.config

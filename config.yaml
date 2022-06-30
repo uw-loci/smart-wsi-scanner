@@ -63,7 +63,7 @@ hard_config:
     F-stage-20x : -15800 # 11000
     F-stage-laser : -18500 # -17500
     F-stage-4x : -1000
-    Z-bf-offset : -10500
+    Z-bf-offset : -10560
     Z-laser-offset : 290
     hard-limit-z : [-8500.0, 17000.0]
     hard-limit-x : [-5000.0, 40000.0]

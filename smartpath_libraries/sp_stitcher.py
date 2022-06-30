@@ -145,17 +145,21 @@ class SPStitcher:
         
     def convert_slide(self, mag, remove_file=True):
         print('Converting slide to ome.tif')
+        #args are [mag,pixel size]
+        
         if mag=='4x':
-            script = os.path.join('qupath-projects', 'scripts', 'export-ometif-metadata-4x.groovy')
+            print(f'[4,{self.config["pixel-size-bf-4x"]}]')
+            args = f'[4,{self.config["pixel-size-bf-4x"]}]'
         if mag=='20x':
-            script = os.path.join('qupath-projects', 'scripts', 'export-ometif-metadata-20x.groovy')
+            args = f'[20,{self.config["pixel-size-bf-20x"]}]'
         if mag=='mp':
-            script = os.path.join('qupath-projects', 'scripts', 'export-ometif-metadata-mp.groovy')       
+            args = f'[20,{self.config["pixel-size-shg"]}]'
+        script = os.path.join('qupath-projects', 'scripts', 'export-ometif.groovy')       
         image_dirs = glob.glob(os.path.join('data', 'slides', mag, '*.tif'))
         for img_dir in image_dirs:
             if img_dir.find("ome") != -1:
                 continue
-            subprocess.run([self.qupath_dir, "script", script, "-i", img_dir], shell=True)
+            subprocess.run([self.qupath_dir, "script", script, "-i", img_dir, "--args", args], shell=True)
             if remove_file:
                 os.remove(img_dir)
         
