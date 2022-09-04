@@ -49,6 +49,7 @@ class SPAcquisition:
         self.z_list_mp = None
         self.bf_process_fn = None
         self.lsm_process_fn = None
+        self.dcc_overload = False
         
             
     def config_preset(self, config):
@@ -710,30 +711,40 @@ class SPAcquisition:
             returns['Z positions'] = z_positions
         return returns
 
-    def define_lsm_processor(self, func):
+    def define_lsm_processor(self, func=None, network=None):
         def img_process_fn(image, metadata):
-            image = func(image)
+            if network:
+                image = network.compute(image)
+            elif func:
+                image = func(image)
             image = img_as_uint(image)
+            diff = np.max(image)-np.min(image)
+            if diff < 2000: 
+                self.dcc_overload=True
             return image, metadata
         self.lsm_process_fn = img_process_fn
 
-    # def lsm_reset_PMT(self):
-    #     config = self.config
-    #     def lsm_hook_fn(event, bridge, event_queue):
-    #         core = bridge.get_core()
-    #         core.set_property('DCC100', 'DCC100 status', 'On')
-    #         core.set_property('DCC100', 'ClearOverload', 'Clear')
-    #         core.wait_for_system()
-    #         core.set_property('DCC100', 'DCC100 status', 'On')
-    #         core.set_property('DCC100', 'Connector1GainHV_Percent', config['lsm-pmt-gain']*100)
-    #         return event
-    #     self.lsm_hook_fn=lsm_hook_fn
+    def lsm_reset_PMT(self):
+        config = self.config
+        def lsm_hook_fn(event, bridge, event_queue):
+            if self.dcc_overload:
+                print('PMT overloaded! Trying to reset...')
+                core = bridge.get_core()
+                core.set_property('DCC100', 'DCC100 status', 'Off')
+                core.wait_for_system()
+                core.set_property('DCC100', 'DCC100 status', 'On')
+                core.wait_for_system()
+                core.set_property('DCC100', 'Connector1GainHV_Percent', config['lsm-pmt-gain']*100)
+                core.wait_for_system()
+                self.dcc_overload=False
+            return event
+        self.lsm_hook_fn=lsm_hook_fn
     
     def whole_slide_lsm_scan(self, save_path=None, acq_name=None, position_list=None, z_stack=False, z_center=None, sample_depth=20, z_step=4):
         config = self.config
         if position_list.shape[1] == 3:
             if z_stack:
-                with Acquisition(save_path, acq_name, self.lsm_process_fn) as acq:
+                with Acquisition(save_path, acq_name, self.lsm_process_fn, post_hardware_hook_fn=self.lsm_hook_fn) as acq:
                     events = multi_d_acquisition_events(xyz_positions=position_list.reshape(-1, 3), 
                                                         z_start=-int(sample_depth/2), z_end=int(sample_depth/2), z_step=z_step)
                     acq.acquire(events)      

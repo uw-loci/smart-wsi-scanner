@@ -36,18 +36,34 @@ user_config:
   classifier : null
 
 model_config:
-    gpu : False
-    batch-size : 32
-    image-channel : 1
-    dropout-rate : 0.1
-    cnn-base-channel : 4
-    normalization : null
-    norm-range : [13251, 63085]
-    dimension : "2D"
-    classifier-backbone : "ResNet18"
-    classifier-num-class : 2
-    mil-classifier-thresh : 2
-    slide-type : "TMA"
+    adv-interval: 3
+    average-factor: 50
+    batch-size: 8
+    blindspot-rate: 0.05
+    cnn-base-channel: 8
+    dataset: datasets/PA_2081b
+    gan-lambda: 5
+    gpu: true
+    image-channel: 1
+    image-extension: tif
+    iter-per-epoch: 200
+    iterations: 200000
+    learning-rate: 0.0001
+    load-weights: supervised2022-08-07_13-02-52
+    loss-gain: 1000
+    norm-range:
+    - 5420
+    - 44017
+    norm-range-target:
+    - 6265
+    - 38567
+    only-pixel-loss: false
+    percep-lambda: 0.5
+    resolution: 512
+    test-interval: 5
+    threads: 0
+    up-scale-factor: 2
+
 
 hard_config:
     pixel-size-bf-20x : 0.222 # 0.222 micron/pixel at (1392, 1040)
