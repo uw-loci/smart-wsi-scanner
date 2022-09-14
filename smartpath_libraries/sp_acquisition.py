@@ -28,12 +28,8 @@ class SPAcquisition:
         
         print('Load LSM presets.')
         config = self.config_preset(config)
-        if config['lsm-enhancer'] is not None:
-            print('Configuring LSM enhancer')
-            self.lsm_enhancer = LSMEnhancer(config)
-        elif config['bf-enhancer'] is not None:
-            print('Configuring BF enhancer')
-            self.bf_enhancer = BFEnhancer(config)
+        self.lsm_enhancer = None
+        self.bf_enhancer = None
         
         self.config = config
         self.core = mmcore
@@ -135,6 +131,7 @@ class SPAcquisition:
         core = self.core
         config = self.config
         current_objective = core.get_property('Turret:O:35', 'Label')
+        core.set_auto_shutter(True)
         if mod == 'shg':
             if current_objective == 'Position-2':
                 print('Current magnification not supported for LSM. Switching magnification.')
@@ -711,16 +708,22 @@ class SPAcquisition:
             returns['Z positions'] = z_positions
         return returns
 
-    def define_lsm_processor(self, func=None, network=None):
+    def define_lsm_processor(self, func=None, network=False):
+        lsm_enhancer = self.lsm_enhancer
         def img_process_fn(image, metadata):
             if network:
-                image = network.compute(image)
+                image = img_as_uint(image)
+                image = lsm_enhancer.compute(image)
             elif func:
                 image = func(image)
             image = img_as_uint(image)
             diff = np.max(image)-np.min(image)
-            if diff < 2000: 
+            if diff < 2000 and not network: 
                 self.dcc_overload=True
+            if diff < 100 and network: 
+                self.dcc_overload=True
+            metadata['Height'] = image.shape[0]
+            metadata['Width'] =  image.shape[1]
             return image, metadata
         self.lsm_process_fn = img_process_fn
 

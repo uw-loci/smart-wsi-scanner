@@ -10,7 +10,7 @@ import torch
 import shutil
 import random
 import numpy as np
-from skimage import io, img_as_uint, exposure
+from skimage import io, img_as_uint, exposure, transform
 from skimage.metrics import peak_signal_noise_ratio
 import warnings
 from .lsm_utils import screen_background, PerceptualLoss
@@ -297,14 +297,13 @@ class Enhancer(nn.Module):
     def compute(self, img_arr):
         with torch.no_grad():
             config = self.config
-            model = self.backbone
+            model = self.backbone.eval()
             device = next(model.parameters()).device
-            img_arr = img_as_uint(img_arr)
-            img_arr = exposure.rescale_intensity(img_arr, in_range=(config['norm-range'][0], config['norm-range'][1]), out_range=(0, 65535)).astype(int)
-            img_input = exposure.rescale_intensity(1.0*img_arr, in_range=(0, 65535), out_range=(0, 1))
-            img_tensor = torch.from_numpy(img_input)[None, None, :, :].float().to(device)
+            # img_arr = img_as_uint(img_arr)
+            img_arr = exposure.rescale_intensity(img_arr*1.0, in_range=(config['norm-range'][0], config['norm-range'][1]), out_range=(0, 1))
+            img_tensor = torch.from_numpy(img_arr)[None, None, :, :].float().to(device)
             prediction = model(img_tensor)
-            out_arr = img_as_uint(np.clip(prediction.cpu().numpy().squeeze(), 0, 1))
+            out_arr = np.clip(prediction.cpu().numpy().squeeze(), 0, 1)
             return out_arr
             
 
