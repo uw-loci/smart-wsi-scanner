@@ -718,9 +718,8 @@ class SPAcquisition:
                 image = func(image)
             image = img_as_uint(image)
             diff = np.max(image)-np.min(image)
-            if diff < 2000 and not network: 
-                self.dcc_overload=True
-            if diff < 100 and network: 
+            if func or network: diff_limit = 2000 else diff_limit = 100
+            if diff < diff_limit: 
                 self.dcc_overload=True
             metadata['Height'] = image.shape[0]
             metadata['Width'] =  image.shape[1]
