@@ -18,10 +18,10 @@ Install required packages:
 Install [PyTorch](https://pytorch.org/get-started/locally/), pick GPU or CPU version.  
 
 ## Software requirement
-Micro-manager 2.0 gamma, OpenScan, QuPath and FIJI. See [document](https://github.com/uw-loci/smart-wsi-scanner/blob/master/docs/manual.pdf) for details.  
+Micro-manager 2.0 gamma, OpenScan, QuPath and FIJI. See [document](https://docs.google.com/document/d/1mAJuh3Eu8Bkt_IAWVCzh7XT79KacVCjf/edit?usp=sharing&ouid=111512958445591507194&rtpof=true&sd=true) for details.  
 
 ## How to use  
-See [document]("docs/manual.pdf") for details.  
+See step-by-step instructions in the [notebook](main.ipynb).
 
 ## Related repositories
 Supervised and weakly supervised classifier for histological datasets: https://github.com/uw-loci/histo-classifier.  
